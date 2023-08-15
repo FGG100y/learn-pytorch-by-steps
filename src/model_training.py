@@ -35,3 +35,6 @@ for epoch in range(n_epochs):
         tag_scalar_dict={"training": loss, "validation": val_loss},
         global_step=epoch,
     )
+writer.close()
+
+save_checkpoint()

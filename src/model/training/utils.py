@@ -1,7 +1,9 @@
+import torch
+
+
 def make_train_step_fn(model, loss_fn, optimizer):
     # build function that performs a step in the train loop
     def perform_train_step_fn(x, y):
-
         # sets model to TRAIN mode:
         model.train()
 
@@ -26,7 +28,6 @@ def make_train_step_fn(model, loss_fn, optimizer):
 def make_val_step_fn(model, loss_fn):
     # build function that performs a step in the validation loop
     def perform_val_step_fn(x, y):
-
         # sets model to EVAL mode:
         model.eval()
 
@@ -39,3 +40,24 @@ def make_val_step_fn(model, loss_fn):
         return loss.item()
 
     return perform_val_step_fn
+
+
+def save_checkpoint():
+    checkpoint = {
+        "epoch": n_epochs,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "loss": loss,
+        "val_loss": val_loss,
+    }
+    torch.save(checkpoint, "models/model_checkpoint.pth")
+
+
+def load_checkpoint(model, optimizer):
+    checkpoint = torch.load("models/model_checkpoint.pth")
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    saved_epoch = checkpoint["epoch"]
+    saved_losses = checkpoint["loss"]
+    saved_val_losses = checkpoint["val_loss"]
+    return model, optimizer, saved_epoch, saved_losses, saved_val_losses

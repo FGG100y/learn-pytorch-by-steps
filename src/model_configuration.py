@@ -15,6 +15,7 @@ torch.manual_seed(42)
 
 # create a model and send to device
 model = nn.Sequential(nn.Linear(1, 1)).to(device)
+print(model.state_dict())
 
 # Defines a SGD optimizer to update the parameters
 optimizer = optim.SGD(model.parameters(), lr=lr)
@@ -33,3 +34,6 @@ writer = SummaryWriter('runs/simple_linear_regression')
 # fetch a single batch so we can use add_graph
 x_dummy, y_dummpy = next(iter(train_loader))
 writer.add_graph(model, x_dummy.to(device))
+
+model, optimizer, *rest = load_checkpoint(model, optimizer)
+print(model.state_dict())
