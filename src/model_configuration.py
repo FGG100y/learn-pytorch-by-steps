@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from model.training.utils import make_train_step_fn
+from model.training.utils import make_val_step_fn
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -22,3 +23,6 @@ loss_fn = nn.MSELoss(reduction='mean')
 
 # create train_step function
 train_step_fn = make_train_step_fn(model, loss_fn, optimizer)
+
+# create train_step function
+val_step_fn = make_val_step_fn(model, loss_fn)

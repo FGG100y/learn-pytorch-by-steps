@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 
 
@@ -18,9 +19,13 @@ def mini_batch(device, data_loader, step_fn):
 n_epochs = 1000  # Defines number of epochs
 
 losses = []
+val_losses = []
 for epoch in range(n_epochs):
     # inner loop (though mini-batches)
     loss = mini_batch(device, train_loader, train_step_fn)
     losses.append(loss)
 
+    with torch.no_grad():  # NO gradients in validation!
+        val_loss = mini_batch(device, val_loader, val_step_fn)
+        val_losses.append(val_loss)
 
