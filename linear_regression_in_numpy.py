@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
+verbose = False
+
 
 # Data Generation ----------------------------
 def gen_data(N=100):
@@ -44,7 +46,8 @@ np.random.seed(42)
 b = np.random.randn(1)
 w = np.random.randn(1)
 
-print(b, w)
+if verbose:
+    print(b, w)
 
 # Sets learning rate - this is "eta" ~ the "n"-like Greek letter
 lr = 0.1
@@ -70,10 +73,12 @@ for epoch in range(n_epochs):
     b = b - lr * b_grad
     w = w - lr * w_grad
 
-print(b, w)
+if verbose:
+    print(b, w)
 
 
 # Sanity Check: do we get the same results as our gradient descent?
 linr = LinearRegression()
 linr.fit(x_train, y_train)
-print(linr.intercept_, linr.coef_[0])
+if verbose:
+    print(linr.intercept_, linr.coef_[0])
