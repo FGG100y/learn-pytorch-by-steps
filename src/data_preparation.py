@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data.dataset import random_split
-from torch.utils.tensorboard import SummaryWriter
 from linear_regression_in_numpy import true_model
 
 #  from data.preparation import CustomDataset

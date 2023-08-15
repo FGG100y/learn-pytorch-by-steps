@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 
 from model.training.utils import make_train_step_fn
 from model.training.utils import make_val_step_fn
@@ -26,3 +27,9 @@ train_step_fn = make_train_step_fn(model, loss_fn, optimizer)
 
 # create train_step function
 val_step_fn = make_val_step_fn(model, loss_fn)
+
+# create a tensorboard SummaryWriter
+writer = SummaryWriter('runs/simple_linear_regression')
+# fetch a single batch so we can use add_graph
+x_dummy, y_dummpy = next(iter(train_loader))
+writer.add_graph(model, x_dummy.to(device))

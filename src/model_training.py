@@ -29,3 +29,9 @@ for epoch in range(n_epochs):
         val_loss = mini_batch(device, val_loader, val_step_fn)
         val_losses.append(val_loss)
 
+    # records both losses and val_losses for each epoch under tag 'loss'
+    writer.add_scalars(
+        main_tag="loss",
+        tag_scalar_dict={"training": loss, "validation": val_loss},
+        global_step=epoch,
+    )
