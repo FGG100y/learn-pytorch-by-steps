@@ -9,7 +9,8 @@ from linear_regression_in_numpy import true_model
 #
 #  plt.style.use("fivethirtyeight")
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+#  device = "cuda" if torch.cuda.is_available() else "cpu"
+
 x, y = true_model()
 
 # Our data was in Numpy arrays, but we need to transform them

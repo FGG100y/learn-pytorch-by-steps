@@ -1,13 +1,20 @@
+import datetime
+import numpy as np
+import matplotlib.pyplot as plt
+import torch
+from torch.utils.tensorboard import SummaryWriter
+
+
 class MyTrainingClass(object):
     # the constructor
-    def __ini__(self, model, loss_fn, optimizer):
+    def __init__(self, model, loss_fn, optimizer):
         # storing arguments as attributes
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         # send the model to device
-        self.model.to(device)
+        self.model.to(self.device)
 
         # placeholder attributes
         self.train_loader = None
@@ -110,7 +117,7 @@ class MyTrainingClass(object):
     def set_seed(self, seed=42):
         torch.backends.cudnn.daterministric = True
         torch.backends.cudnn.benchmark = False
-        torch.manual_seed(sedd)
+        torch.manual_seed(seed)
         np.random.seed(seed)
 
     def train(self, n_epochs, seed=42):
@@ -150,6 +157,7 @@ class MyTrainingClass(object):
             "val_loss": self.val_losses,
         }
         torch.save(checkpoint, filename)
+        print(f"Saved checkpoint to {filename}")
 
     def load_checkpoint(self, filename):
         checkpoint = torch.load(filename)
