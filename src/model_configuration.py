@@ -23,17 +23,18 @@ optimizer = optim.SGD(model.parameters(), lr=lr)
 # Defines a MSE loss function
 loss_fn = nn.MSELoss(reduction='mean')
 
-# create train_step function
-train_step_fn = make_train_step_fn(model, loss_fn, optimizer)
-
-# create train_step function
-val_step_fn = make_val_step_fn(model, loss_fn)
-
-# create a tensorboard SummaryWriter
-writer = SummaryWriter('runs/simple_linear_regression')
-# fetch a single batch so we can use add_graph
-x_dummy, y_dummpy = next(iter(train_loader))
-writer.add_graph(model, x_dummy.to(device))
-
-model, optimizer, *rest = load_checkpoint(model, optimizer)
-print(model.state_dict())
+#  # NOTE that these lines below already integrated into MyTrainingClass
+#  # create train_step function
+#  train_step_fn = make_train_step_fn(model, loss_fn, optimizer)
+#
+#  # create train_step function
+#  val_step_fn = make_val_step_fn(model, loss_fn)
+#
+#  # create a tensorboard SummaryWriter
+#  writer = SummaryWriter('runs/simple_linear_regression')
+#  # fetch a single batch so we can use add_graph
+#  x_dummy, y_dummpy = next(iter(train_loader))
+#  writer.add_graph(model, x_dummy.to(device))
+#
+#  model, optimizer, *rest = load_checkpoint(model, optimizer)
+#  print(model.state_dict())
