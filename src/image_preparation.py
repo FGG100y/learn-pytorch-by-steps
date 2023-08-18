@@ -71,7 +71,7 @@ if augmentation:
     train_composer = Compose(
         [RandomHorizontalFlip(p=0.5), Normalize(mean=(0.5,), std=(0.5,))]
     )
-    val_composer = Compose(Normalize(mean=(0.5,), std=(0.5,)))
+    val_composer = Compose([Normalize(mean=(0.5,), std=(0.5,))])
 
     train_dataset = TransformedTensorDataset(
         x_train_tensor, y_train_tensor, transform=train_composer
