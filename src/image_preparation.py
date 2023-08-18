@@ -37,7 +37,7 @@ def index_splitter(n, splits, seed=42):
 
 def make_balanced_sampler(y):
     _, counts = y.unique(return_counts=True)
-    weights = 1.0 / counts
+    weights = 1.0 / counts.float()
     sample_weights = weights[y.squeeze().long()]
     generator = torch.Generator()
     sampler = WeightedRandomSampler(
@@ -54,7 +54,7 @@ def make_balanced_sampler(y):
 # --------------------------------
 
 images, labels = generate_dataset(img_size=5, n_images=300, seed=13)
-x_tensor = torch.as_tensor(images / 255.0)
+x_tensor = torch.as_tensor(images / 255).float()
 y_tensor = torch.as_tensor(labels.reshape(-1, 1)).float()
 
 train_idx, val_idx = index_splitter(len(x_tensor), [80, 20])
