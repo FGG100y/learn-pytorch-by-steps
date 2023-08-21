@@ -17,7 +17,11 @@ model = nn.Sequential()
 if classification:
     if image_data:
         model.add_module("flatten", nn.Flatten())
-        model.add_module("output", nn.Linear(25, 1, bias=False))
+        model.add_module("hidden0", nn.Linear(25, 5, bias=False))
+        model.add_module("activation0", nn.ReLU())
+        model.add_module("hidden1", nn.Linear(5, 3, bias=False))
+        model.add_module("activation1", nn.ReLU())
+        model.add_module("output", nn.Linear(3, 1, bias=False))
         model.add_module("sigmoid", nn.Sigmoid())
         optimizer = optim.SGD(model.parameters(), lr=lr)
         loss_fn = nn.BCELoss()
