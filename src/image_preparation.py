@@ -1,22 +1,11 @@
 import torch
-from torchvision.transforms import (
-    Compose,
-    ToTensor,
-    Normalize,
-    ToPILImage,
-    RandomHorizontalFlip,
-    Resize,
-)
-from torch.utils.data import (
-    Dataset,
-    TensorDataset,
-    DataLoader,
-    random_split,
-    SubsetRandomSampler,
-    WeightedRandomSampler,
-)
-
 from image_classification import generate_dataset
+from torch.utils.data import (DataLoader, Dataset, SubsetRandomSampler,
+                              TensorDataset, WeightedRandomSampler,
+                              random_split)
+from torchvision.transforms import (Compose, Normalize, RandomHorizontalFlip,
+                                    Resize, ToPILImage, ToTensor)
+
 from src.data.preparation.utils import TransformedTensorDataset
 
 
@@ -53,21 +42,21 @@ def make_balanced_sampler(y):
 # Generate data and transform them
 # --------------------------------
 
-images, labels = generate_dataset(img_size=5, n_images=300, seed=13)
+images, labels = generate_dataset(img_size=10, n_images=1000, binary=False, seed=17)
 x_tensor = torch.as_tensor(images / 255).float()
 y_tensor = torch.as_tensor(labels.reshape(-1, 1)).float()
 
 train_idx, val_idx = index_splitter(len(x_tensor), [80, 20])
 
+x_train_tensor = x_tensor[train_idx]
+y_train_tensor = y_tensor[train_idx]
+x_val_tensor = x_tensor[val_idx]
+y_val_tensor = y_tensor[val_idx]
 
-augmentation = True
+augmentation = False
 weighted_sampler = True
 
 if augmentation:
-    x_train_tensor = x_tensor[train_idx]
-    y_train_tensor = y_tensor[train_idx]
-    x_val_tensor = x_tensor[val_idx]
-    y_val_tensor = y_tensor[val_idx]
     train_composer = Compose(
         [RandomHorizontalFlip(p=0.5), Normalize(mean=(0.5,), std=(0.5,))]
     )
@@ -78,31 +67,26 @@ if augmentation:
     )
     if weighted_sampler:
         sampler = make_balanced_sampler(y_train_tensor)
-        train_loader = DataLoader(
-            dataset=train_dataset, batch_size=16, sampler=sampler
-        )
+        train_loader = DataLoader(dataset=train_dataset, batch_size=16, sampler=sampler)
     else:
-        train_loader = DataLoader(
-            dataset=train_dataset, batch_size=16, shuffle=True
-        )
+        train_loader = DataLoader(dataset=train_dataset, batch_size=16, shuffle=True)
 
     val_dataset = TransformedTensorDataset(
         x_val_tensor, y_val_tensor, transform=val_composer
     )
     val_loader = DataLoader(dataset=val_dataset, batch_size=16, shuffle=True)
 else:
-    composer = Compose(
-        [RandomHorizontalFlip(p=0.5), Normalize(mean=(0.5,), std=(0.5,))]
+    train_composer = Compose([Normalize(mean=(0.5,), std=(0.5,))])
+    val_composer = Compose([Normalize(mean=(0.5,), std=(0.5,))])
+
+    train_dataset = TransformedTensorDataset(
+        x_train_tensor, y_train_tensor, transform=train_composer
     )
-    dataset = TransformedTensorDataset(x_tensor, y_tensor, transform=composer)
+    val_dataset = TransformedTensorDataset(
+        x_val_tensor, y_val_tensor, transform=val_composer
+    )
 
-    train_sampler = SubsetRandomSampler(train_idx)
-    val_sampler = SubsetRandomSampler(val_idx)
-
+    sampler = make_balanced_sampler(y_train_tensor)
     # NOTE that cannot set shuffle=True when using a sampler
-    train_loader = DataLoader(
-        dataset=dataset, batch_size=16, sampler=train_sampler
-    )
-    val_loader = DataLoader(
-        dataset=dataset, batch_size=16, sampler=val_sampler
-    )
+    train_loader = DataLoader(dataset=train_dataset, batch_size=16, sampler=sampler)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=16)
