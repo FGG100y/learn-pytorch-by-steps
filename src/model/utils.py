@@ -196,3 +196,8 @@ class MyTrainingClass(object):
         if self.train_loader and self.writer:
             x_dummy, y_dummpy = next(iter(self.train_loader))
             self.writer.__add_graph(self.model, x_dummy.to(self.device))
+
+    def count_parameters(self):
+        return sum(p.numel()
+                   for p in self.model.parameters()
+                   if p.requires_grad)
