@@ -80,13 +80,13 @@ else:
     val_composer = Compose([Normalize(mean=(0.5,), std=(0.5,))])
 
     train_dataset = TransformedTensorDataset(
-        x_train_tensor, y_train_tensor, transform=train_composer
+        x_train_tensor, y_train_tensor, transform=None
     )
     val_dataset = TransformedTensorDataset(
-        x_val_tensor, y_val_tensor, transform=val_composer
+        x_val_tensor, y_val_tensor, transform=None
     )
 
     sampler = make_balanced_sampler(y_train_tensor)
     # NOTE that cannot set shuffle=True when using a sampler
-    train_loader = DataLoader(dataset=train_dataset, batch_size=16, sampler=sampler)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=16)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=8, sampler=sampler)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=8)

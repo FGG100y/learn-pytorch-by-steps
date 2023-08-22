@@ -5,7 +5,7 @@ import torch.optim as optim
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-lr = 0.1
+lr = 0.051
 torch.manual_seed(42)
 
 classification = True
@@ -35,7 +35,7 @@ if classification:
             # maxpooling:
             # n_channels@8x8 等于 16 chuncks of 2x2，然后得到 n_channels@4x4
             model.add_module("maxp1", nn.MaxPool2d(kernel_size=2)),
-            # Flattening: n_channels _ 4 _ 4
+            # Flattening: n_channels * 4 * 4
             model.add_module("flatten", nn.Flatten())
 
             # classification part
@@ -55,7 +55,7 @@ if classification:
             optimizer = optim.SGD(model.parameters(), lr=lr)
             # Since NO nn.LogSoftmax in model's last layer,
             # one must use nn.CrossEntropyLoss(), else using nn.NLLLoss():
-            loss_fn = nn.CrossEntropyLoss()
+            loss_fn = nn.CrossEntropyLoss(reduction="mean")
         else:
             # classification task for image data using simple DNN
             model.add_module("flatten", nn.Flatten())

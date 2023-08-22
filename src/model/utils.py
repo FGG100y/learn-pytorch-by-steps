@@ -226,7 +226,7 @@ class MyTrainingClass(object):
             # set title, labels, and removes ticks
             if title is not None:
                 ax.set_title(f"{title} #{j}", fontsize=12)
-            shp = np.atleat_2d(image).shape
+            shp = np.atleast_2d(image).shape
             ax.set_ylabel(f"{layer_name}\n{shp[0]}x{shp[1]}", rotation=0, labelpad=40)
             xlabel1 = "" if y is None else f"\nLabel: {y[j]}"
             xlabel2 = "" if yhat is None else f"\nPredicted: {yhat[j]}"
@@ -238,7 +238,7 @@ class MyTrainingClass(object):
 
             # Plots weight as an image
             ax.imshow(
-                np.atleat_2d(image.squeeze()),
+                np.atleast_2d(image.squeeze()),
                 cmap="gray",
                 vmin=minv,
                 vmax=maxv,
@@ -261,7 +261,7 @@ class MyTrainingClass(object):
                 # builds a figure
                 size = (2 * n_channels + 2, 2 * n_filters)
                 fig, axes = plt.subplots(n_filters, n_channels, figsize=size)
-                axes = np.atleat_2d(axes)
+                axes = np.atleast_2d(axes)
                 axes = axes.reshape(n_filters, n_channels)
                 # for each channels_out (filter)
                 for i in range(n_filters):
@@ -282,7 +282,7 @@ class MyTrainingClass(object):
         # clear any prevois values
         self.visualation = {}
         # create the dictionary to map layer objects to thier names
-        modules = list(self.model.name_modules())
+        modules = list(self.model.named_modules())
         layer_names = {layer: name for name, layer in modules[1:]}
 
         if hook_fn is None:
