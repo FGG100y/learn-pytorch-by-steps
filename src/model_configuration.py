@@ -18,7 +18,7 @@ model = nn.Sequential()
 if classification:
     if image_data:
         if using_cnn:
-            # featurizer part
+            # featurizer part of a CNN model:
             # Block 1: 1@10x10 -> n_channels@8x8 -> n_channels@4x4
             n_channels = 1
             # convolution:
@@ -57,6 +57,7 @@ if classification:
             # one must use nn.CrossEntropyLoss(), else using nn.NLLLoss():
             loss_fn = nn.CrossEntropyLoss()
         else:
+            # classification task for image data using simple DNN
             model.add_module("flatten", nn.Flatten())
             model.add_module("hidden0", nn.Linear(25, 5, bias=False))
             model.add_module("activation0", nn.ReLU())
@@ -64,14 +65,14 @@ if classification:
             model.add_module("activation1", nn.ReLU())
             model.add_module("output", nn.Linear(3, 1, bias=False))
             model.add_module("sigmoid", nn.Sigmoid())
+
             optimizer = optim.SGD(model.parameters(), lr=lr)
             loss_fn = nn.BCELoss()
     else:
+        # classification task for other tasks (not image data)
         model.add_module("linear", nn.Linear(2, 1))
-        print(model.state_dict())
 
         optimizer = optim.SGD(model.parameters(), lr=lr)
-
         # Since NO nn.Sigmoid() in model's last layer,
         # one must use nn.BCEWithLogitsLoss(), else using nn.BCELoss():
         loss_fn = nn.BCEWithLogitsLoss(reduction="mean")
