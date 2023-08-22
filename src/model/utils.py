@@ -334,7 +334,9 @@ class MyTrainingClass(object):
                     output if is_vector else output[:, j].squeeze(),
                     y,
                     yhat,
-                    layer_name=layers[i] if is_vector else f"{layers[i]}\nfil#{row-start_row}",
+                    layer_name=(
+                        layers[i] if is_vector else f"{layers[i]}\nfil#{row-start_row}"
+                    ),
                     title="Image" if (row == 0) else None,
                 )
                 row += 1
@@ -342,3 +344,37 @@ class MyTrainingClass(object):
             ax.label_outer()
         plt.tight_layout()
         return fig
+
+    def correct(self, x, y, threshold=0.5):
+        self.model.eval()
+        yhat = self.model(x.to(self.device))
+        y = y.to(self.device)
+        self.model.train()
+
+        # size of batch, number of classes
+        n_samples, n_dims = yhat.shape
+        if n_dims > 1:
+            # in a multiclass classification, the largest logit always wins,
+            # so we don't bother getting probabilities
+
+            # PyTorch's version of argmax -> (max_value, index of max_value)
+            _, predicted = torch.max(yhat, 1)
+        else:
+            n_dims += 1
+            # in binary classification, we need to check if the last layer is
+            # a sigmoid (and then it produces proba.)
+            if isinstance(self.model, nn.Sequential) and isinstance(
+                self.model[-1], nn.Sigmoid
+            ):
+                predicted = (yhat > threshold).long()
+            # or something else (logits), which need to convert using sigmoid
+            else:
+                predicted = (torch.sigmoid(yhat) > threshold).long()
+
+        # how many samples got classified correctly for each class
+        result = []
+        for c in range(n_dims):
+            n_class = (y == c).sum().item()
+            n_correct = (predicted[y == c] == c).sum().item()
+            result.append((n_correct, n_class))
+        return torch.tensor(result)
