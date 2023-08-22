@@ -201,6 +201,14 @@ class MyTrainingClass(object):
     def count_parameters(self):
         return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
 
+    # staticmethod, what?
+    # The @staticmethod decorator allows the method to be called on an
+    # uninstanciated class object. It is as if we're attaching a method to a
+    # class but that method does not dependend on an instance of that class.
+    # A staticmethod does not have a "self" argument. The inner workings of the
+    # function must be indenpendent of the instance of the class it belongs to.
+    # The staticmethod can be executed from the class itself instead of from
+    # one of its instances.
     @staticmethod
     def _visualize_tensors(axs, x, y=None, yhat=None, layer_name="", title=None):
         # the number of images is the number of subplots in a row
