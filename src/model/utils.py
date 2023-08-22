@@ -8,6 +8,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class MyTrainingClass(object):
+    # class attributes
+    # for forward hooks
+    visualization = {}
+    handles = {}
+
     # the constructor
     def __init__(self, model, loss_fn, optimizer):
         # storing arguments as attributes
@@ -261,14 +266,47 @@ class MyTrainingClass(object):
                 # for each channels_out (filter)
                 for i in range(n_filters):
                     MyTrainingClass._visualize_tensors(
-                            axes[i, :],
-                            weights[i],
-                            layer_name=f"Filter ${i}",
-                            title="Channel"
-                            )
+                        axes[i, :],
+                        weights[i],
+                        layer_name=f"Filter ${i}",
+                        title="Channel",
+                    )
                 for ax in axes.flat:
                     ax.label_outer()
                 fig.tight_layout()
                 return fig
         except AttributeError:
             return
+
+    def attach_hooks(self, layers_to_hook, hook_fn=None):
+        # clear any prevois values
+        self.visualation = {}
+        # create the dictionary to map layer objects to thier names
+        modules = list(self.model.name_modules())
+        layer_names = {layer: name for name, layer in modules[1:]}
+
+        if hook_fn is None:
+
+            def hook_fn(layer, inputs, outputs):
+                name = layer_names[layer]
+                values = outputs.detach().cpu().numpy()
+                if self.visualization[name] is None:
+                    self.visualization[name] = values
+                else:
+                    self.visualization[name] = np.concatenate(
+                        self.visualization[name], values
+                    )
+
+        for name, layer in modules:
+            # if the layer is in our list
+            if name in layers_to_hook:
+                # initializes the corresponding key in the dictionary
+                self.visualization[name] = None
+                self.handles[name] = layer.register_forward_hook(hook_fn)
+
+    def remove_hooks(self):
+        # loop throngh all hooks and removes them
+        for handle in self.handles.values():
+            handle.remove()
+        # clear the dict
+        self.handles = {}
