@@ -44,7 +44,7 @@ def make_balanced_sampler(y):
 
 images, labels = generate_dataset(img_size=10, n_images=1000, binary=False, seed=17)
 x_tensor = torch.as_tensor(images / 255).float()
-y_tensor = torch.as_tensor(labels.reshape(-1, 1)).float()
+y_tensor = torch.as_tensor(labels).long()
 
 train_idx, val_idx = index_splitter(len(x_tensor), [80, 20])
 
