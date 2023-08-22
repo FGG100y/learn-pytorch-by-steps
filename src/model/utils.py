@@ -3,6 +3,7 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -230,3 +231,36 @@ class MyTrainingClass(object):
                 vmax=maxv,
             )
         return
+
+    def visualize_filters(self, layer_name, **kwargs):
+        try:
+            # get the layer object from the model
+            layer = self.model
+            for name in layer_name.split("."):
+                layer = getattr(layer, name)
+            # only looking at filters for 2D convolutions
+            if isinstance(layer, nn.Conv2d):
+                # takes the weight information
+                weights = layer.weight.data.cpu().numpy()
+                # weight -> (channels_out (filter), channels_in, H, W)
+                n_filters, n_channels, _, _ = weights.shape
+
+                # builds a figure
+                size = (2 * n_channels + 2, 2 * n_filters)
+                fig, axes = plt.subplots(n_filters, n_channels, figsize=size)
+                axes = np.atleat_2d(axes)
+                axes = axes.reshape(n_filters, n_channels)
+                # for each channels_out (filter)
+                for i in range(n_filters):
+                    MyTrainingClass._visualize_tensors(
+                            axes[i, :],
+                            weights[i],
+                            layer_name=f"Filter ${i}",
+                            title="Channel"
+                            )
+                for ax in axes.flat:
+                    ax.label_outer()
+                fig.tight_layout()
+                return fig
+        except AttributeError:
+            return
