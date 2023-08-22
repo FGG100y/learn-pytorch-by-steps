@@ -1,6 +1,7 @@
 import datetime
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -32,8 +33,7 @@ class MyTrainingClass(object):
         self.val_step_fn = self._make_val_step_fn()
 
     def to(self, device):
-        """to specify a different device
-        """
+        """to specify a different device"""
         try:
             self.device = device
             self.model.to(self.device)
@@ -198,6 +198,35 @@ class MyTrainingClass(object):
             self.writer.__add_graph(self.model, x_dummy.to(self.device))
 
     def count_parameters(self):
-        return sum(p.numel()
-                   for p in self.model.parameters()
-                   if p.requires_grad)
+        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+
+    @staticmethod
+    def _visualize_tensors(axs, x, y=None, yhat=None, layer_name="", title=None):
+        # the number of images is the number of subplots in a row
+        n_images = len(axs)
+        # gets max and min values for scaling the grayscale
+        minv, maxv = np.min(x[:n_images]), np.max(x[:n_images])
+        # for each image
+        for j, image in enumerate(x[:n_images]):
+            ax = axs[j]
+            # set title, labels, and removes ticks
+            if title is not None:
+                ax.set_title(f"{title} #{j}", fontsize=12)
+            shp = np.atleat_2d(image).shape
+            ax.set_ylabel(f"{layer_name}\n{shp[0]}x{shp[1]}", rotation=0, labelpad=40)
+            xlabel1 = "" if y is None else f"\nLabel: {y[j]}"
+            xlabel2 = "" if yhat is None else f"\nPredicted: {yhat[j]}"
+            xlabel = f"{xlabel1}{xlabel2}"
+            if len(xlabel):
+                ax.set_xlabel(xlabel, fontsize=12)
+                ax.set_xticks([])
+                ax.set_yticks([])
+
+            # Plots weight as an image
+            ax.imshow(
+                np.atleat_2d(image.squeeze()),
+                cmap="gray",
+                vmin=minv,
+                vmax=maxv,
+            )
+        return
