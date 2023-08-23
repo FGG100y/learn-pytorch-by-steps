@@ -76,14 +76,14 @@ if augmentation:
     )
     val_loader = DataLoader(dataset=val_dataset, batch_size=16, shuffle=True)
 else:
-    train_composer = Compose([Normalize(mean=(0.5,), std=(0.5,))])
-    val_composer = Compose([Normalize(mean=(0.5,), std=(0.5,))])
+    train_composer = Compose([Normalize(mean=(0.2,), std=(0.5,))])
+    val_composer = Compose([Normalize(mean=(0.2,), std=(0.5,))])
 
     train_dataset = TransformedTensorDataset(
-        x_train_tensor, y_train_tensor, transform=None
+        x_train_tensor, y_train_tensor, transform=train_composer,
     )
     val_dataset = TransformedTensorDataset(
-        x_val_tensor, y_val_tensor, transform=None
+        x_val_tensor, y_val_tensor, transform=val_composer,
     )
 
     sampler = make_balanced_sampler(y_train_tensor)
