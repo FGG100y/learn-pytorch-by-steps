@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
+from torch.transforms import Normalize
 
 
 class MyTrainingClass(object):
@@ -388,3 +389,35 @@ class MyTrainingClass(object):
         elif reduce == 'mean':
             results = results.float().mean(axis=0)
         return results
+
+    @staticmethod
+    def statistics_per_channel(images, labels):
+        # NCHW format
+        n_samples, n_channels, n_height, n_weight = images.size()
+        # flatten HW into a single dimension
+        flatten_per_channel = images.reshape(n_samples, n_channels, -1)
+
+        # computes stats of each image per channel
+        # average/std pixel value per channel
+        # (n_samples, n_channels)
+        means = flatten_per_channel.mean(axis=2)
+        stds = flatten_per_channel.std(axis=2)
+
+        # add up stats of all images in a mini-batch
+        sum_means = means.sum(axis=0)
+        sum_stds = stds.sum(axis=0)
+
+        # make tensor of shape (1, n_channels)
+        n_samples = torch.tensor([n_samples] * n_channels).float()
+
+        return torch.stack([n_samples, sum_means, sum_stds], axis=0)
+
+    @staticmethod
+    def make_normalizer(loader):
+        total_samples, total_means, total_stds = MyTrainingClass.loader_apply(
+                loader, MyTrainingClass.statistics_per_channel
+                )
+        norm_mean = total_means / total_samples
+        norm_std = total_stds / total_samples
+
+        return Normalize(mean=norm_mean, std=norm_std)
