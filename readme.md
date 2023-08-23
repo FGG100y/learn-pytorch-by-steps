@@ -31,3 +31,16 @@ mymodel.set_loaders(train_loader, val_loader)
 mymodel.set_tensorboard("image_clfier_relu")
 mymodel.train(n_epochs=50)
 ```
+
+# Issues
+
+Iss-01: 
+Using composer of Normalize(mean=0.5, std=0.5)
+-> 图像像素值为-1和1
+-> cnn will always predict the same class
+
+Using composer of Normalize(mean=0.2, std=0.5)
+-> 图像像素值为(-1,1)区间
+-> cnn will misclassify few samples only
+
+Seems like this is related to -1/1 imput value of images
