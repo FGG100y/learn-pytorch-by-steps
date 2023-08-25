@@ -49,6 +49,9 @@ class MyTrainingClass(object):
             print(f"Couldn't send it to {device}, send it to {self.device}")
             self.model.to(self.device)
 
+    def set_optimizer(self, optimizer):
+        self.optimizer = optimizer
+
     def set_loaders(self, train_loader, val_loader=None):
         self.train_loader = train_loader
         self.val_loader = val_loader
