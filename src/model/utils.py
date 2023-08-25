@@ -424,3 +424,68 @@ class MyTrainingClass(object):
         norm_std = total_stds / total_samples
 
         return Normalize(mean=norm_mean, std=norm_std)
+
+    def lr_range_test(self, data_loader, end_lr, num_iter=100, step_mode="exp",
+            alpha=0.05, ax=None):
+        # the test updates both model and optimizer, so we need to store their
+        # initial states to restore them in the end
+        previous_states = {
+                "model": deepcopy(self.model.state_dict()),
+                "optimizer": deepcopy(self.optimizer.state_dict())
+                }
+        # retrieves the learning rate set in the optimizer
+        start_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+        # builds a custom function and corresponding scheduler
+        lr_fn = make_lr_fn(start_lr, end_lr, num_iter, step_mode="exp")
+        scheduler = LambdaLR(self.optimizer, lr_lambda=lr_fn)
+        # variables for tracking results and iterations
+        tracking = {"loss": [], "lr": []}
+        iteration = 0
+
+        # if there are iterations than mini-batches in the data loader,
+        # it will have to loop over it more than once
+        while (iteration < num_iter):
+            # typical mini-batch inner loop:
+            for x_batch, y_batch in data_loader:
+                x_batch = x_batch.to(self.device)
+                y_batch = y_batch.to(self.device)
+                # step 1
+                yhat = self.model(x_batch)
+                # step 2
+                loss = self.loss_fn(yhat, y_batch)
+                # step 3
+                loss.backward()
+
+                # here we keep track of the losses and lr
+                tracking['lr'].append(scheduler.get_last_lr()[0])
+                if iteration == 0:
+                    tracking['loss'].append(loss.item())
+                else:
+                    prev_loss = tracking['loss'][-1]
+                    smoothed_loss = (alpha * loss.item() + (1-alpha)*prev_loss)
+                    tracking['loss'].append(smoothed_loss)
+                iteration += 1
+                # number of iterations reached:
+                if iteration == num_iter:
+                    break
+
+                # step 4
+                self.optimizer.step()
+                scheduler.step()
+                self.optimizer.zero_grad()
+
+        # restore the original states
+        self.optimizer.load_state_dict(previous_states['optimizer'])
+        self.model.load_state_dict(previous_states['model'])
+
+        if ax is None:
+            fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+        else:
+            fig = ax.get_figure()
+        ax.plot(tracking['lr'], tracking['loss'])
+        if step_mode == "exp":
+            ax.set_xscale('log')
+            ax.set_xlabel("learning rate")
+            ax.set_ylabel("loss")
+            fig.tight_layout()
+        return tracking, fig
