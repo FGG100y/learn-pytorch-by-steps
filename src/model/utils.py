@@ -118,8 +118,9 @@ class MyTrainingClass(object):
         if data_loader is None:
             return None
 
+        n_batches = len(data_loader)
         mini_batch_losses = []
-        for x_batch, y_batch in data_loader:
+        for i, (x_batch, y_batch) in enumerate(data_loader):
             # need to send these mini-batch from CPU to GPU
             x_batch = x_batch.to(self.device)
             y_batch = y_batch.to(self.device)
@@ -127,8 +128,11 @@ class MyTrainingClass(object):
             # performs one train step and returns the loss
             batch_loss = step_fn(x_batch, y_batch)
             mini_batch_losses.append(batch_loss)
-        loss = np.mean(mini_batch_losses)
 
+            if not validation:
+                self._mini_batch_schedulers(i / n_batches)
+
+        loss = np.mean(mini_batch_losses)
         return loss
 
     def set_seed(self, seed=42):
@@ -566,6 +570,24 @@ class MyTrainingClass(object):
             if not self.is_batch_lr_scheduler:
                 if isinstance(self.scheduler, optim.lr_scheduler.ReduceLROnPlateau):
                     self.scheduler.step(val_loss)
+                else:
+                    self.scheduler.step()
+
+                current_lr = list(
+                    map(
+                        lambda d: d["lr"],
+                        self.scheduler.optimizer.state_dict()["param_groups"],
+                    )
+                )
+                self.learning_rates.append(current_lr)
+
+    def _mini_batch_schedulers(self, frac_epoch):
+        if self.scheduler:
+            if self.is_batch_lr_scheduler:
+                if isinstance(
+                    self.scheduler, optim.lr_scheduler.CosineAnnealingWarmRestarts
+                ):
+                    self.scheduler.step(self.total_epochs + frac_epoch)
                 else:
                     self.scheduler.step()
 
