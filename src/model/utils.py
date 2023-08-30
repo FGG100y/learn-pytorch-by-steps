@@ -13,6 +13,8 @@ class MyTrainingClass(object):
     # for forward hooks
     visualization = {}
     handles = {}
+    _gradients = {}
+    _parameters = {}
 
     # the constructor
     def __init__(self, model, loss_fn, optimizer):
@@ -489,3 +491,48 @@ class MyTrainingClass(object):
             ax.set_ylabel("loss")
             fig.tight_layout()
         return tracking, fig
+
+    def capture_gradients(self, layers_to_hook):
+        if not isinstance(layers_to_hook, list):
+            layers_to_hook = [layers_to_hook]
+
+        #  modules = list(self.model.named_modules())
+        self._gradients = {}
+
+        def make_log_fn(name, param_id):
+            def log_fn(grad):
+                self._gradients[name][param_id].append(grad.tolist())
+                return None
+            return log_fn
+
+        for name, layer in self.model.named_modules():
+            if name in layers_to_hook:
+                self._gradients.update({name: {}})
+                for param_id, p in layer.named_modules():
+                    if p.requires_grad:
+                        self._gradients[name].update({param_id: []})
+                        log_fn = make_log_fn(name, param_id)
+                        self.handles[f"{name}.{param_id}.grad"] = p.register_hook(log_fn)
+        return
+
+    def capture_parameters(self, layers_to_hook):
+        if not isinstance(layers_to_hook, list):
+            layers_to_hook = [layers_to_hook]
+
+        modules = list(self.model.named_modules())
+        layer_names = {layer: name for name, layer in modules}
+        self._parameters = {}
+
+        for name, layer in modules:
+            if name in layers_to_hook:
+                self._parameters.update({name: {}})
+                for param_id, p in layer.named_modules():
+                    self._parameters[name].update({param_id: []})
+
+        def fw_hook_fn(layer, inputs, outputs):
+            name = layer_names[layer]
+            for param_id, parameter in layer.named_parameters():
+                self._parameters[name][param_id].append(parameter.tolist())
+
+        self.attach_hooks(layers_to_hook, fw_hook_fn)
+        return
