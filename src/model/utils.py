@@ -155,6 +155,8 @@ class MyTrainingClass(object):
                 val_loss = self._mini_batch(validation=True)
                 self.val_losses.append(val_loss)
 
+            self._epoch_schedulers(val_loss)
+
             if self.writer:
                 scalars = {"training": loss}
                 if val_loss is not None:
