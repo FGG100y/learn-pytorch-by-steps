@@ -3,9 +3,10 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.optim as optim
 from torch import nn
-from torch.utils.tensorboard import SummaryWriter
 from torch.transforms import Normalize
+from torch.utils.tensorboard import SummaryWriter
 
 
 class MyTrainingClass(object):
@@ -15,6 +16,10 @@ class MyTrainingClass(object):
     handles = {}
     _gradients = {}
     _parameters = {}
+    # for learning rate
+    scheduler = None
+    is_batch_lr_scheduler = False
+    learning_rates = []
 
     # the constructor
     def __init__(self, model, loss_fn, optimizer):
@@ -386,12 +391,12 @@ class MyTrainingClass(object):
         return torch.tensor(result)
 
     @staticmethod
-    def loader_apply(loader, func, reduce='sum'):
+    def loader_apply(loader, func, reduce="sum"):
         results = [func(x, y) for i, (x, y) in enumerate(loader)]
         results = torch.stack(results, axis=0)
-        if reduce == 'sum':
+        if reduce == "sum":
             results = results.sum(axis=0)
-        elif reduce == 'mean':
+        elif reduce == "mean":
             results = results.float().mean(axis=0)
         return results
 
@@ -420,23 +425,24 @@ class MyTrainingClass(object):
     @staticmethod
     def make_normalizer(loader):
         total_samples, total_means, total_stds = MyTrainingClass.loader_apply(
-                loader, MyTrainingClass.statistics_per_channel
-                )
+            loader, MyTrainingClass.statistics_per_channel
+        )
         norm_mean = total_means / total_samples
         norm_std = total_stds / total_samples
 
         return Normalize(mean=norm_mean, std=norm_std)
 
-    def lr_range_test(self, data_loader, end_lr, num_iter=100, step_mode="exp",
-            alpha=0.05, ax=None):
+    def lr_range_test(
+        self, data_loader, end_lr, num_iter=100, step_mode="exp", alpha=0.05, ax=None
+    ):
         # the test updates both model and optimizer, so we need to store their
         # initial states to restore them in the end
         previous_states = {
-                "model": deepcopy(self.model.state_dict()),
-                "optimizer": deepcopy(self.optimizer.state_dict())
-                }
+            "model": deepcopy(self.model.state_dict()),
+            "optimizer": deepcopy(self.optimizer.state_dict()),
+        }
         # retrieves the learning rate set in the optimizer
-        start_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+        start_lr = self.optimizer.state_dict()["param_groups"][0]["lr"]
         # builds a custom function and corresponding scheduler
         lr_fn = make_lr_fn(start_lr, end_lr, num_iter, step_mode="exp")
         scheduler = LambdaLR(self.optimizer, lr_lambda=lr_fn)
@@ -446,7 +452,7 @@ class MyTrainingClass(object):
 
         # if there are iterations than mini-batches in the data loader,
         # it will have to loop over it more than once
-        while (iteration < num_iter):
+        while iteration < num_iter:
             # typical mini-batch inner loop:
             for x_batch, y_batch in data_loader:
                 x_batch = x_batch.to(self.device)
@@ -459,13 +465,13 @@ class MyTrainingClass(object):
                 loss.backward()
 
                 # here we keep track of the losses and lr
-                tracking['lr'].append(scheduler.get_last_lr()[0])
+                tracking["lr"].append(scheduler.get_last_lr()[0])
                 if iteration == 0:
-                    tracking['loss'].append(loss.item())
+                    tracking["loss"].append(loss.item())
                 else:
-                    prev_loss = tracking['loss'][-1]
-                    smoothed_loss = (alpha * loss.item() + (1-alpha)*prev_loss)
-                    tracking['loss'].append(smoothed_loss)
+                    prev_loss = tracking["loss"][-1]
+                    smoothed_loss = alpha * loss.item() + (1 - alpha) * prev_loss
+                    tracking["loss"].append(smoothed_loss)
                 iteration += 1
                 # number of iterations reached:
                 if iteration == num_iter:
@@ -477,16 +483,16 @@ class MyTrainingClass(object):
                 self.optimizer.zero_grad()
 
         # restore the original states
-        self.optimizer.load_state_dict(previous_states['optimizer'])
-        self.model.load_state_dict(previous_states['model'])
+        self.optimizer.load_state_dict(previous_states["optimizer"])
+        self.model.load_state_dict(previous_states["model"])
 
         if ax is None:
             fig, ax = plt.subplots(1, 1, figsize=(6, 4))
         else:
             fig = ax.get_figure()
-        ax.plot(tracking['lr'], tracking['loss'])
+        ax.plot(tracking["lr"], tracking["loss"])
         if step_mode == "exp":
-            ax.set_xscale('log')
+            ax.set_xscale("log")
             ax.set_xlabel("learning rate")
             ax.set_ylabel("loss")
             fig.tight_layout()
@@ -503,6 +509,7 @@ class MyTrainingClass(object):
             def log_fn(grad):
                 self._gradients[name][param_id].append(grad.tolist())
                 return None
+
             return log_fn
 
         for name, layer in self.model.named_modules():
@@ -512,7 +519,9 @@ class MyTrainingClass(object):
                     if p.requires_grad:
                         self._gradients[name].update({param_id: []})
                         log_fn = make_log_fn(name, param_id)
-                        self.handles[f"{name}.{param_id}.grad"] = p.register_hook(log_fn)
+                        self.handles[f"{name}.{param_id}.grad"] = p.register_hook(
+                            log_fn
+                        )
         return
 
     def capture_parameters(self, layers_to_hook):
@@ -536,3 +545,32 @@ class MyTrainingClass(object):
 
         self.attach_hooks(layers_to_hook, fw_hook_fn)
         return
+
+    def set_lr_scheduler(self, scheduler):
+        # makes sure the scheduler in the argument is assigned to the optimizer
+        if scheduler.optimizer == self.optimizer:
+            self.scheduler = scheduler
+            if (
+                isinstance(scheduler, optim.lr_scheduler.CyclicLR)
+                or isinstance(scheduler, optim.lr_scheduler.OneCycleLR)
+                or isinstance(scheduler, optim.lr_scheduler.CosineAnnealingWarmRestarts)
+            ):
+                self.is_batch_lr_scheduler = True
+            else:
+                self.is_batch_lr_scheduler = False
+
+    def _epoch_schedulers(self, val_loss):
+        if self.scheduler:
+            if not self.is_batch_lr_scheduler:
+                if isinstance(self.scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+                    self.scheduler.step(val_loss)
+                else:
+                    self.scheduler.step()
+
+                current_lr = list(
+                    map(
+                        lambda d: d["lr"],
+                        self.scheduler.optimizer.state_dict()["param_groups"],
+                    )
+                )
+                self.learning_rates.append(current_lr)
