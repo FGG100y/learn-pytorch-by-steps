@@ -41,6 +41,9 @@ class MyTrainingClass(object):
         self.val_losses = []
         self.total_epochs = 0
 
+        # clip value
+        self.clipping = None
+
         # functions for model, loss function and optimizer
         # NOTE that these functions use attributes as ARGS
         self.train_step_fn = self._make_train_step_fn()
@@ -67,6 +70,19 @@ class MyTrainingClass(object):
         suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.writer = SummaryWriter(f"{folder}/{name}_{suffix}")
 
+    def set_clip_grad_value(self, clip_value):
+        self.clipping = lambda: nn.utils.clip_grad_value_(
+            self.model.parameters(), clip_value=clip_value
+        )
+
+    def set_clip_grad_norm(self, max_norm, norm_type=2):
+        self.clipping = lambda: nn.utils.clip_grad_norm_(
+            self.model.parameters(), max_norm, norm_type
+        )
+
+    def remove_clip(self):
+        self.clipping = None
+
     # protected methods (prefix with underscore):
     # methods should not be called by the user, they are supposed to be called
     # either internally or by the child class.
@@ -83,6 +99,11 @@ class MyTrainingClass(object):
 
             # Step 3 - Computes gradients for both "b" and "w" parameters
             loss.backward()
+
+            # Gradient clipping after conputing gradients and before udpating
+            # parameters:
+            if callable(self.clipping):
+                self.clipping()
 
             # Step 4 - Updates parameters using gradients and the learning rate
             self.optimizer.step()
