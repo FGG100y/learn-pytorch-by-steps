@@ -80,7 +80,23 @@ class MyTrainingClass(object):
             self.model.parameters(), max_norm, norm_type
         )
 
+    def set_clip_backprop(self, clip_value):
+        """specific for RNNs (which requires gradients to be clipped during
+        backpropagation)
+        """
+        if self.clipping is None:
+            self.clipping = []
+        for p in self.model.parameters():
+            if p.requires_grad:
+                def func(grad):
+                    return torch.clamp(grad, -clip_value, clip_value)
+                handle = p.register_hook(func)
+                self.clipping.append(handle)
+
     def remove_clip(self):
+        if isinstance(self.clipping, list):
+            for handle in self.clipping:
+                handle.remove()
         self.clipping = None
 
     # protected methods (prefix with underscore):
