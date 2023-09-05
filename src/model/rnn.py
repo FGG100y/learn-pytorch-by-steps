@@ -1,15 +1,15 @@
 import torch.nn as nn
 
 
-class SquareModel(nn.Module):
+class SquareModelGRU(nn.Module):
     def __init__(self, n_features, hidden_dim, n_outputs):
-        super(SquareModel, self).__init__()
+        super(SquareModelGRU, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_features = n_features
         self.n_outputs = n_outputs
         self.hidden = None
-        # simple rnn:
-        self.basic_rnn = nn.RNN(self.n_features,
+        # simple GRU:
+        self.basic_rnn = nn.GRU(self.n_features,
                                 self.hidden_dim,
                                 batch_first=True)
         # classifer

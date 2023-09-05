@@ -24,7 +24,7 @@ test_loader = DataLoader(test_data, batch_size=16)
 
 # model configuration
 torch.manual_seed(21)
-model = SquareModel(n_features=2, hidden_dim=2, n_outputs=1)
+model = SquareModelGRU(n_features=2, hidden_dim=2, n_outputs=1)
 loss = nn.BCEWithLogitLoss()
 optimizer = optim.Adam(model.parametets(), lr=0.01)
 
