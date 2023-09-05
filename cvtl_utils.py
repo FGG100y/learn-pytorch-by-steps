@@ -49,3 +49,10 @@ def preprocessed_dataset(model, loader, device=None):
 
     dataset = TensorDataset(features, labels)
     return dataset
+
+
+def weights_init(m):
+    if isinstance(m, nn.Linear):
+        nn.init.kaiming_uniform(m.weight, nonlinearity="relu")
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)

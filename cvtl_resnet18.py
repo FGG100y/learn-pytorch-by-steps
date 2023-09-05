@@ -11,7 +11,7 @@ from torchvision.transforms import (CenterCrop, Compose, Normalize,
                                     RandomResizedCrop, Resize, ToPILImage,
                                     ToTensor)
 
-from cvtl_utils import freeze_model, preprocessed_dataset
+from cvtl_utils import freeze_model, preprocessed_dataset, weights_init
 
 
 # imagenet statisitcs:
@@ -28,8 +28,9 @@ val_data = ImageFolder(root='data/cv/test', transforms=composer)
 train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=16)
 
-fine_tuning = True
 num_classes = 3
+fine_tuning = True
+manually_init_weights = True
 model = resnet18(pretrained=False)
 
 if fine_tuning:
@@ -39,7 +40,9 @@ if fine_tuning:
     # model configuration:
     torch.manual_seed(42)
     model.fc = nn.Linear(512, num_classes)
-
+    if manually_init_weights:
+        with torch.no_grad():
+            model.apply(weights_init)
     multi_loss_fn = nn.CrossEntropyLoss(reduction="mean")
     optimizer_model = optim.Adam(model.parameters(), lr=3e-4)
 
