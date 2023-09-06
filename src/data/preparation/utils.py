@@ -2,6 +2,9 @@ import torch
 from torch.utils.data import Dataset, TensorDataset, DataLoader
 
 
+# when we cannot simply use a TensorDataset due to list of elements with
+# different sizes, we must build a custom dataset that makes a tensor out of
+# each sequence:
 class CustomDataset(Dataset):
     def __init__(self, x, y):
         self.x = [torch.as_tensor(s).float() for s in x]
