@@ -9,7 +9,8 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from src.data_generation.square_sequences import generate_sequences
 
 # Data Preparation
-variable_length_dataset = True
+variable_length_dataset = False
+conv1d = True
 if variable_length_dataset:
     var_points, var_directions = generate_sequences(variable_len=True)
     var_test_points, var_test_directions = generate_sequences(
@@ -26,22 +27,46 @@ else:
     points, directions = generate_sequences(n=128, seed=13)
     test_points, test_directions = generate_sequences(seed=19)
 
-    train_data = TensorDataset(
-        torch.as_tensor(points).float(), torch.as_tensor(directions).view(-1, 1).float()
-    )
+    if conv1d:
+        # sequence-last (NFL) shape:
+        train_data = TensorDataset(
+            torch.as_tensor(points).float().permute(0, 2, 1),
+            torch.as_tensor(directions).view(-1, 1).float()
+        )
 
-    test_data = TensorDataset(
-        torch.as_tensor(test_points).float(),
-        torch.as_tensor(test_directions).view(-1, 1).float(),
-    )
+        test_data = TensorDataset(
+            torch.as_tensor(test_points).float().permute(0, 2, 1),
+            torch.as_tensor(test_directions).view(-1, 1).float(),
+        )
+    else:
+        train_data = TensorDataset(
+            torch.as_tensor(points).float(), torch.as_tensor(directions).view(-1, 1).float()
+        )
+
+        test_data = TensorDataset(
+            torch.as_tensor(test_points).float(),
+            torch.as_tensor(test_directions).view(-1, 1).float(),
+        )
 
     train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=16)
 
 
 # model configuration
-torch.manual_seed(21)
-model = SquareModelPacked(n_features=2, hidden_dim=2, n_outputs=1)
+if conv1d:
+    torch.manual_seed(21)
+    model = nn.Sequential()
+    model.add_module("conv1d", nn.Conv1d(in_channels=2,
+                                         out_channels=1,
+                                         kernel_size=2))
+    model.add_module("relu", nn.ReLU())
+    model.add_module("flatten", nn.Flatten())
+    model.add_module("output", nn.Linear(3, 1))
+    #  print(model.state_dict())
+else:
+    torch.manual_seed(21)
+    model = SquareModelPacked(n_features=2, hidden_dim=2, n_outputs=1)
+
 loss = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
