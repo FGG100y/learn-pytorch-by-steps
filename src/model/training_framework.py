@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torch import nn
-from torch.transforms import Normalize
+from torchvision.transforms import Normalize
 from torch.utils.tensorboard import SummaryWriter
 
 
