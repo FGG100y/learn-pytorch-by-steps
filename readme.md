@@ -1,3 +1,31 @@
+# DNN 101
+
+Shapes
+
+The shapes topic of images, sequences:
+
+1. NCHW shape for images:
+    - N stands for the Number of images (e.g., in a mini-batch)
+    - C stands for the number of Channels (or filters) in each image
+    - H stands for each image's Height
+    - W stands for each image's Width
+
+2. NCL/NFL shape for sequences:
+    - N stands for the Number of sequences (e.g., in a mini-batch)
+    - C stands for the number of Channels (or filters) in each sequence
+    - L stands for the Length of each sequence
+    - F stands for the number of features of each sequence
+
+NOTE that since 1D convolutions only move along the sequence, each feature is
+considered an input channel. So, the shape NCL is the same as NFL.
+
+|               | Shape         | Use Case                                  |
+| ------------- | ------------- | -------                                   |
+| Batch-first   | N,L,F         | Typical shape; RNNs with batch_first=True |
+| RNN-friendly  | L,N,F         | Default for RNNs (batch_first=False)      |
+| Sequence-last | N,F,L         | Default for 1D convolution                |
+
+
 # how this scripts work
 
 1. linear_regression_in_numpy.py, linear_regression_in_pytorch.py
