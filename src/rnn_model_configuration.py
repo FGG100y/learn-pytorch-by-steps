@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from src.data_generation.square_sequences import generate_sequences
 
 # Data Preparation
-variable_length_dataset = False
-conv1d = True
+variable_length_dataset = True
+conv1d = False
 if variable_length_dataset:
     var_points, var_directions = generate_sequences(variable_len=True)
     var_test_points, var_test_directions = generate_sequences(
@@ -65,7 +65,10 @@ if conv1d:
     #  print(model.state_dict())
 else:
     torch.manual_seed(21)
-    model = SquareModelPacked(n_features=2, hidden_dim=2, n_outputs=1)
+    model = SquareModelOne(n_features=2, hidden_dim=2, n_outputs=1,
+                           rnn_layer=nn.LSTM, num_layers=1, bidirectional=True
+                           )
+    #  print(model.state_dict())
 
 loss = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
