@@ -9,8 +9,8 @@ from src.data_generation.square_sequences import generate_sequences
 
 
 # Data Preparation
-points, directions = generate_sequences(n=128, seed=42)
-test_points, test_directions = generate_sequences(seed=43)
+points, directions = generate_sequences(n=128, seed=13)
+test_points, test_directions = generate_sequences(seed=19)
 
 train_data = TensorDataset(torch.as_tensor(points).float(),
                            torch.as_tensor(directions).view(-1, 1).float())
@@ -31,7 +31,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.01)
 # model training
 mtc_rnn = MyTrainingClass(model, loss, optimizer)
 mtc_rnn.set_loaders(train_loader, test_loader)
-mtc_rnn.train(n_epochs=10)
+mtc_rnn.train(n_epochs=100)
 
 # plots
 viz = False
