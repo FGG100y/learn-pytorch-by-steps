@@ -12,12 +12,16 @@ from src.data_generation.square_sequences import generate_sequences
 variable_length_dataset = True
 if variable_length_dataset:
     var_points, var_directions = generate_sequences(variable_len=True)
-    print(var_points[:2])
+    var_test_points, var_test_directions = generate_sequences(
+        n=64, variable_len=True, seed=15
+    )
     train_var_data = CustomDataset(var_points, var_directions)
+    test_var_data = CustomDataset(var_test_points, var_test_directions)
     # pack the mini-batch using collate function:
     train_loader = DataLoader(
         train_var_data, batch_size=16, shuffle=True, collate_fn=pack_collate
     )
+    test_loader = DataLoader(test_var_data, batch_size=16, collate_fn=pack_collate)
 else:
     points, directions = generate_sequences(n=128, seed=13)
     test_points, test_directions = generate_sequences(seed=19)
@@ -37,7 +41,7 @@ else:
 
 # model configuration
 torch.manual_seed(21)
-model = SquareModelLSTM(n_features=2, hidden_dim=2, n_outputs=1)
+model = SquareModelPacked(n_features=2, hidden_dim=2, n_outputs=1)
 loss = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
