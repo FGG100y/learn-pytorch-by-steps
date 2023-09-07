@@ -62,10 +62,44 @@ def encoder_decoder_demo(teacher_forcing_proba=0.5, verbose=False):
         print(encdec(source_seq))
 
 
-demo = 1
+demo = 0
 if demo:
     encoder_decoder_demo(verbose=1)
 
 
 # data preparation
 points, directions = generate_sequences(n=256, seed=13)
+full_train = torch.as_tensor(points).float()  # full sequences as features (X)
+target_train = full_train[:, 2:]  # labels (y) for MSELoss
+
+test_points, test_directions = generate_sequences(seed=19)
+full_test = torch.as_tensor(test_points).float()
+source_test = full_test[:, :2]  # source sequences as features (X)
+target_test = full_test[:, 2:]  # target sequences as labels (y)
+
+train_data = TensorDataset(full_train, target_train)
+test_data = TensorDataset(source_test, target_test)
+
+generator = torch.Generator()
+train_loader = DataLoader(train_data, batch_size=16, shuffle=True,
+                          generator=generator)  # ensure reproducibility
+test_loader = DataLoader(test_data, batch_size=16)
+
+# model configuration
+torch.manual_seed(23)
+encoder = Encoder(n_features=2, hidden_dim=2)
+decoder = Decoder(n_features=2, hidden_dim=2)
+model = EncoderDecoder(encoder, decoder, input_len=2, target_len=2,
+                       teacher_forcing_proba=0.5)
+loss = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+# model training
+mtc_seq = MyTrainingClass(model, loss, optimizer)
+mtc_seq.set_loaders(train_loader, test_loader)
+mtc_seq.train(100)
+
+viz = 1
+if viz:
+    fig = mtc_seq.plot_losses()
+    fig = sequence_pred(mtc_seq, full_test, test_directions)
