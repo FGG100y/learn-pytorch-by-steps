@@ -30,29 +30,41 @@ def encoder_decoder_demo(teacher_forcing_proba=0.5, verbose=False):
     # initial data point is the last element of source sequence
     inputs = source_seq[:, -1:]
 
-    #  teacher_forcing_proba = 0.5
-    target_len = target_seq.shape[1]
-    for i in range(target_len):
-        if verbose:
+    if verbose == 2:
+        #  teacher_forcing_proba = 0.5
+        target_len = target_seq.shape[1]
+        for i in range(target_len):
             print("-*-decoder-*-")
             print(f"Hidden: {decoder.hidden}")
-        out = decoder(inputs)
-        if verbose:
+            out = decoder(inputs)
             print(f"Output: {out}\n")
-        # the predictions are next step's inputs
-        # NOTE the "teacher forcing":
-        # model trained using teacher forcing will minimize the loss given the
-        # correct inputs at every step of the target sequence. But this will
-        # never be the case ate testing time! And we must seek help from stats.
-        if torch.rand(1) <= teacher_forcing_proba:
-            inputs = target_seq[:, i:i+1]
-        else:
-            inputs = out
+            # the predictions are next step's inputs
+            # NOTE the "teacher forcing":
+            # model trained using teacher forcing will minimize the loss given the
+            # correct inputs at every step of the target sequence. But this will
+            # never be the case ate testing time! And we must seek help from stats.
+            if torch.rand(1) <= teacher_forcing_proba:
+                inputs = target_seq[:, i:i+1]
+            else:
+                inputs = out
+
+    encdec = EncoderDecoder(encoder, decoder, input_len=2, target_len=2,
+                            teacher_forcing_proba=0.5)
+    # model expects the full sequence
+    # so it can randomly use the teacher forcing:
+    encdec.train()
+    if verbose:
+        print(encdec(full_seq))
+
+    # in evaluation/test mode, it only needs the source sequence as input:
+    encdec.eval()
+    if verbose:
+        print(encdec(source_seq))
 
 
 demo = 1
 if demo:
-    encoder_decoder_demo(verbose=2)
+    encoder_decoder_demo(verbose=1)
 
 
 # data preparation
