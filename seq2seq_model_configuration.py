@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Dataset, random_split, TensorDataset
 from src.data_generation.square_sequences import generate_sequences
 
 
-def encoder_decoder_demo(verbose=False):
+def encoder_decoder_demo(teacher_forcing_proba=0.5, verbose=False):
     # a square
     full_seq = torch.tensor([
         [-1, -1], [-1, 1], [1, 1], [1, -1]
@@ -30,6 +30,7 @@ def encoder_decoder_demo(verbose=False):
     # initial data point is the last element of source sequence
     inputs = source_seq[:, -1:]
 
+    #  teacher_forcing_proba = 0.5
     target_len = target_seq.shape[1]
     for i in range(target_len):
         if verbose:
@@ -40,8 +41,13 @@ def encoder_decoder_demo(verbose=False):
             print(f"Output: {out}\n")
         # the predictions are next step's inputs
         # NOTE the "teacher forcing":
-        # completely ignores the predictions and uses real data instead
-        inputs = target_seq[:, i:i+1]
+        # model trained using teacher forcing will minimize the loss given the
+        # correct inputs at every step of the target sequence. But this will
+        # never be the case ate testing time! And we must seek help from stats.
+        if torch.rand(1) <= teacher_forcing_proba:
+            inputs = target_seq[:, i:i+1]
+        else:
+            inputs = out
 
 
 demo = 1
