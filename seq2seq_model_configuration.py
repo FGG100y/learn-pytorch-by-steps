@@ -39,10 +39,9 @@ def encoder_decoder_demo(verbose=False):
         if verbose:
             print(f"Output: {out}\n")
         # the predictions are next step's inputs
-        # NOTE the "bad" & the "ugly":
-        # an untrained model will make really bad predictions, and these
-        # predictions will still be used as inputs for subsequent steps.
-        inputs = out
+        # NOTE the "teacher forcing":
+        # completely ignores the predictions and uses real data instead
+        inputs = target_seq[:, i:i+1]
 
 
 demo = 1
