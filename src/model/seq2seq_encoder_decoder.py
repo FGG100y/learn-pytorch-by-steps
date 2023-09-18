@@ -1,8 +1,10 @@
 """
 Encoder-Decoder architecture: the encoder
 """
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class EncoderDecoder(nn.Module):
@@ -111,3 +113,46 @@ class Decoder(nn.Module):
 
         # (N, 1, F), the same shape as the input
         return out.view(-1, 1, self.n_features)
+
+
+class Attention(nn.Module):
+    def __init__(self, hidden_dim, input_dim=None, proj_values=False):
+        super().__init__()
+        self.d_k = hidden_dim
+        self.input_dim = hidden_dim if input_dim is None else input_dim
+        self.proj_values = proj_values
+        # affine transformations for Q,K,V
+        self.linear_query = nn.Linear(self.input_dim, hidden_dim)
+        self.linear_key = nn.Linear(self.input_dim, hidden_dim)
+        self.linear_values = nn.Linear(self.input_dim, hidden_dim)
+        self.alphas = None
+
+    # receive a batch-first hidden states from encoder
+    def init_keys(self, keys):
+        self.keys = keys
+        self.proj_values = self.linear_key(self.keys)
+        self.values = self.linear_query(self.keys) if self.proj_values else self.keys
+
+    def score_function(self, query):
+        proj_query = self.linear_query(query)   # affine transformation
+        # scaled dot product
+        # (N, 1, H) x (N, H, L) -> (N, 1, L)
+        dot_products = torch.bmm(proj_query, self.proj_keys.permute(0, 2, 1))
+        scores = dot_products / np.sqrt(self.d_k)
+        return scores
+
+    def forward(self, query, mask=None):
+        # using keys and query to compute "alignment scores":
+        scores = self.score_function(query)     # (N, 1, L)
+        # make the attention score equal to zero for the padding data points:
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+
+        # using alignment scores to compute attention scores:
+        alphas = F.softmax(scores, dim=-1)      # (N, 1, L)
+        self.alphas = alphas.detach()
+
+        # using values and attention scores to generate the context vector:
+        # (N, 1, L) x (N, L, H) -> (N, 1, H)
+        context = torch.bmm(alphas, self.values)
+        return context
