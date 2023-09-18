@@ -8,13 +8,34 @@ from torch.utils.data import DataLoader, Dataset, random_split, TensorDataset
 from src.data_generation.square_sequences import generate_sequences
 
 
-def encoder_decoder_demo(teacher_forcing_proba=0.5, verbose=False):
-    # a square
+def calc_alphas(ks, q):
+    """calculate attention scores
+    """
+    # (N, 1, H) x (N, H, L) -> (N, 1, L)
+    products = torch.bmm(q, ks.permute(0, 2, 1))
+    alphas = F.softmax(products, dim=-1)
+    return alphas
+
+
+def attention_q_k_v_demo(teacher_forcing_proba=0.5, verbose=False):
+    # a square (points with coordinates and directions as sequences)
     full_seq = torch.tensor([
         [-1, -1], [-1, 1], [1, 1], [1, -1]
         ]).float().view(1, 4, 2)  # (N, L, F)
     source_seq = full_seq[:, :2]  # first two conners
     target_seq = full_seq[:, 2:]  # last two conners
+
+    # context vector = \sum alignment_vector
+
+    # alignment_vector: the resulting mulitiplication of a "Value" by its
+    # corresponding attention_score
+
+    # attention_score(alphas) are based on matching each hidden state of the
+    # decoder to every hidden state of the encoder (good match, high
+    # attention-score)
+
+    # context vector will be concatenated to "Query"(hidden state of decoder)
+    # and use it as the input for the linear layer that generate predictions
 
     torch.manual_seed(21)
     encoder = Encoder(n_features=2, hidden_dim=2)  # untrained model
