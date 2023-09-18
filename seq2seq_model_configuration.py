@@ -11,9 +11,11 @@ from src.data_generation.square_sequences import generate_sequences
 def calc_alphas(ks, q):
     """calculate attention scores
     """
+    dims = q.size(-1)
     # (N, 1, H) x (N, H, L) -> (N, 1, L)
     products = torch.bmm(q, ks.permute(0, 2, 1))
-    alphas = F.softmax(products, dim=-1)
+    scaled_products = products / np.sqrt(dims)
+    alphas = F.softmax(scaled_products, dim=-1)
     return alphas
 
 
