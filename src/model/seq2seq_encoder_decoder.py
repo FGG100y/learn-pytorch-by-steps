@@ -160,3 +160,23 @@ class Attention(nn.Module):
         # (N, 1, L) x (N, L, H) -> (N, 1, H)
         context = torch.bmm(alphas, self.values)
         return context
+
+
+class EncoderDecoderAttn(EncoderDecoder):
+    def __init__(self, encoder, decoder, input_len, target_len,
+                 teacher_forcing_proba=0.5):
+        super().__init__(encoder, decoder, input_len, target_len,
+                         teacher_forcing_proba)
+        self.alphas = None
+
+    def init_outputs(self, batch_size):
+        device = next(self.parameters()).device
+        # (N, L(target), F)
+        self.outputs = torch.zeros(batch_size, self.target_len,
+                                   self.encoder.n_features).to(device)
+        # (N, L(target), L(source))
+        self.alphas = torch.zeros(batch_size, self.target_len, self.input_len).to(device)
+
+    def store_outputs(self, i, out):
+        self.outputs[:, i:i+1, :] = out
+        self.alphas[:, i:i+1, :] = self.decoder.attn.alphas
