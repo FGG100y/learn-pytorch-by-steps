@@ -256,3 +256,64 @@ class DecoderSelfAttn(nn.Module):
         att2 = self.cross_attn_heads(att1, source_mask)
         out = self.ffn(att2)
         return out
+
+
+class EncoderDecoderSelfAttn(nn.Module):
+    def __init__(self, encoder, decoder, input_len, target_len):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.input_len = input_len
+        self.target_len = target_len
+        self.target_mask = self.subsequent_mask(self.target_len)
+
+    @staticmethod
+    def subsequent_mask(size):
+        attn_shape = (1, size, size)
+        subsequent_mask = (
+                1 - torch.triu(torch.ones(attn_shape), diagonal=1)
+                ).bool()
+        return subsequent_mask
+
+    def encode(self, source_seq, source_mask):
+        # encodes the source sequences and uses the result to init the decoder
+        encoder_states = self.encoder(source_seq, source_mask)
+        self.decoder.init_keys(encoder_states)
+
+    def decode(self, shifted_target_seq, source_mask=None, target_mask=None):
+        # decodes/generates a sequence using the shifted (masked) target sequences
+        # JUST in TRAIN mode
+        outputs = self.decoder(shifted_target_seq, source_mask, target_mask)
+        return outputs
+
+    def predict(self, source_seq, source_mask):
+        # decodes/generates a sequence using one input at a time
+        # JUST in EVAL mode
+        inputs = source_seq[:, -1:]
+        for i in range(self.target_len):
+            out = self.decode(inputs,
+                              source_mask,
+                              self.target_mask[:, :i+1, :i+1])
+            out = torch.cat([inputs, out[:, -1:, :]], dim=-2)
+            inputs = out.detach()
+        outputs = inputs[:, 1:, :]
+        return outputs
+
+    def forward(self, X, source_mask=None):
+        # sends the mask to the same device as the inputs
+        self.target_mask = self.target_mask.type_as(X).bool()
+        # slices the input to get source sequence
+        source_seq = X[:, :self.input_len, :]
+        # encodes source sequence AND initializes decoder
+        self.encode(source_seq, source_mask)
+        if self.training:
+            # slices the input to get the shifted target sequence
+            shifted_target_seq = X[:, self.input_len-1:-1, :]
+            # decodes using the mask to prevent data leaking
+            outputs = self.decode(shifted_target_seq,
+                                  source_mask,
+                                  self.target_mask)
+        else:
+            # decodes using its own prediction
+            outputs = self.predict(shifted_target_seq, source_mask)
+        return outputs
