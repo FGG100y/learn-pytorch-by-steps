@@ -33,5 +33,5 @@ def sequence_pred(cls_obj, X, directions=None, n_rows=2, n_cols=5):
         ax.set_ylim([-1.45, 1.45])
 
     fig.tight_layout()
-    plt.savefig("fig_square_sequences.png")
+    plt.savefig("./images/fig_square_sequences.png")
     return fig

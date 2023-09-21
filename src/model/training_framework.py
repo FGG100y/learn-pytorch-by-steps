@@ -250,7 +250,7 @@ class MyTrainingClass(object):
         plt.xlabel("Epochs")
         plt.legend()
         plt.tight_layout()
-        plt.savefig("fig_train_val_losses.png")
+        plt.savefig("./images/fig_train_val_losses.png")
         return fig
 
     def add_graph(self):
