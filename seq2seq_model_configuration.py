@@ -103,17 +103,17 @@ train_loader = DataLoader(
 test_loader = DataLoader(test_data, batch_size=16)
 
 # model configuration
-torch.manual_seed(17)
-encoder = Encoder(n_features=2, hidden_dim=2)
-decoder = DecoderAttn(n_features=2, hidden_dim=2)
-model = EncoderDecoderAttn(
-    encoder, decoder, input_len=2, target_len=2, teacher_forcing_proba=0.5
+torch.manual_seed(23)
+encoder_self_attn = EncoderSelfAttn(n_heads=3, d_model=2, ff_units=10, n_features=2)
+decoder_self_attn = DecoderSelfAttn(n_heads=3, d_model=2, ff_units=10, n_features=2)
+model = EncoderDecoderSelfAttn(
+    encoder_self_attn, decoder_self_attn, input_len=2, target_len=2
 )
-loss = nn.MSELoss()
+loss_fn = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
 # model training
-mtc_seq = MyTrainingClass(model, loss, optimizer)
+mtc_seq = MyTrainingClass(model, loss_fn, optimizer)
 mtc_seq.set_loaders(train_loader, test_loader)
 mtc_seq.train(100)
 
