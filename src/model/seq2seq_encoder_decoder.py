@@ -317,3 +317,59 @@ class EncoderDecoderSelfAttn(nn.Module):
             # decodes using its own prediction
             outputs = self.predict(source_seq, source_mask)
         return outputs
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, max_len, d_model):
+        super().__init__()
+        self.d_model = d_model
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len).float().unsequeeze(1)
+        angular_speed = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(1000.0) / d_model))
+        # even dimensions:
+        pe[:, 0::2] = torch.sin(position * angular_speed)
+        # odd dimensions:
+        pe[:, 1::2] = torch.cos(position * angular_speed)
+
+        # use register_buffer() to define an attribute of the module,
+        # an attribute is part of the module's state, yet is not parameter
+        # so that they will not update by gradient descent
+        self.register_buffer("pe", pe.unsequeeze(0))
+
+    def forward(self, X):
+        # X is (N, L, D)
+        # pe is (1, max_len, D)
+        scaled_x = X * np.sqrt(self.d_model)
+        encoded = scaled_x + self.pe[:, :X.size(1), :]
+        return encoded
+
+
+class EncoderPe(nn.Module):
+    def __init__(self, n_heads, d_model, ff_units, n_features=None,
+            max_len=100):
+        super().__init__()
+        pe_dim = d_model if n_features is None else n_features
+        self.pe = PositionalEncoding(max_len, pe_dim)
+        self.layer = EncoderSelfAttn(n_heads, d_model, ff_units, n_features)
+
+    def forward(self, query, mask=None):
+        query_pe = self.pe(query)
+        out = self.layer(query_pe, mask)    # .layer() equals .layer.forward()
+        return out
+
+
+class DecoderPe(nn.Module):
+    def __init__(self, n_heads, d_model, ff_units, n_features=None,
+            max_len=100):
+        super().__init__()
+        pe_dim = d_model if n_features is None else n_features
+        self.pe = PositionalEncoding(max_len, pe_dim)
+        self.layer = DecoderSelfAttn(n_heads, d_model, ff_units, n_features)
+
+    def init_keys(self, states):
+        self.layer.init_keys(states)
+
+    def forward(self, query, source_mask=None, target_mask=None):
+        query_pe = self.pe(query)
+        out = self.layer(query_pe, source_mask, target_mask)
+        return out
