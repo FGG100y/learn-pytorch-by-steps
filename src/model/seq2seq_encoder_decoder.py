@@ -324,7 +324,7 @@ class PositionalEncoding(nn.Module):
         super().__init__()
         self.d_model = d_model
         pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).float().unsequeeze(1)
+        position = torch.arange(0, max_len).float().unsqueeze(1)
         angular_speed = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(1000.0) / d_model))
         # even dimensions:
         pe[:, 0::2] = torch.sin(position * angular_speed)
@@ -334,7 +334,7 @@ class PositionalEncoding(nn.Module):
         # use register_buffer() to define an attribute of the module,
         # an attribute is part of the module's state, yet is not parameter
         # so that they will not update by gradient descent
-        self.register_buffer("pe", pe.unsequeeze(0))
+        self.register_buffer("pe", pe.unsqueeze(0))
 
     def forward(self, X):
         # X is (N, L, D)
