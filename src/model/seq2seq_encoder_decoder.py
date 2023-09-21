@@ -134,7 +134,7 @@ class Attention(nn.Module):
     # receive a batch-first hidden states from encoder
     def init_keys(self, keys):
         self.keys = keys
-        self.proj_values = self.linear_key(self.keys)
+        self.proj_keys = self.linear_key(self.keys)
         self.values = self.linear_query(self.keys) if self.proj_values else self.keys
 
     def score_function(self, query):
@@ -315,5 +315,5 @@ class EncoderDecoderSelfAttn(nn.Module):
                                   self.target_mask)
         else:
             # decodes using its own prediction
-            outputs = self.predict(shifted_target_seq, source_mask)
+            outputs = self.predict(source_seq, source_mask)
         return outputs

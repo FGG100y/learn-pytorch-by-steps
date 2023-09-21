@@ -8,6 +8,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 
 from src.data_generation.square_sequences import generate_sequences
+from plot_square_sequences import sequence_pred
+
 
 
 def calc_alphas(ks, q):
