@@ -231,3 +231,28 @@ class EncoderSelfAttn(nn.Module):
         att = self.self_attn_heads(query, mask)  # att <- context vector
         out = self.ffn(att)                     # out <- hidden state
         return out
+
+
+class DecoderSelfAttn(nn.Module):
+    def __init__(self, n_heads, d_model, ff_units, n_features=None):
+        super().__init__()
+        self.n_heads = n_heads
+        self.d_model = d_model
+        self.ff_units = ff_units
+        self.n_features = d_model if n_features is None else n_features
+        self.self_attn_heads = MultiHeadAttention(n_heads, d_model,
+                                                  input_dim=self.n_features)
+        self.cross_attn_heads = MultiHeadAttention(n_heads, d_model)
+        self.ffn = nn.Sequential(nn.Linear(d_model, ff_units),
+                                 nn.ReLU(),
+                                 nn.Linear(ff_units, self.n_features))
+
+    def init_keys(self, states):
+        self.cross_attn_heads.init_keys(states)
+
+    def forward(self, query, source_mask=None, target_mask=None):
+        self.self_attn_heads.init_keys(query)
+        att1 = self.self_attn_heads(query, target_mask)
+        att2 = self.cross_attn_heads(att1, source_mask)
+        out = self.ffn(att2)
+        return out
