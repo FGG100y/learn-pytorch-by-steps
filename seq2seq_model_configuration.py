@@ -106,11 +106,11 @@ train_loader = DataLoader(
 test_loader = DataLoader(test_data, batch_size=16)
 
 # model configuration
-torch.manual_seed(23)
-encoder_self_attn = EncoderSelfAttn(n_heads=3, d_model=2, ff_units=10, n_features=2)
-decoder_self_attn = DecoderSelfAttn(n_heads=3, d_model=2, ff_units=10, n_features=2)
+torch.manual_seed(43)
+encoder_pe = EncoderPe(n_heads=3, d_model=2, ff_units=10, n_features=2)
+decoder_pe = DecoderPe(n_heads=3, d_model=2, ff_units=10, n_features=2)
 model = EncoderDecoderSelfAttn(
-    encoder_self_attn, decoder_self_attn, input_len=2, target_len=2
+    encoder_pe, decoder_pe, input_len=2, target_len=2
 )
 loss_fn = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
