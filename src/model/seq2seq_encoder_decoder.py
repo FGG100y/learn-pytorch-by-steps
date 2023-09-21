@@ -211,3 +211,23 @@ class MultiHeadAttention(nn.Module):
         contexts = [attn(query, mask=mask) for attn in self.attn_heads]
         out = self.output_function(contexts)
         return out
+
+
+class EncoderSelfAttn(nn.Module):
+    def __init__(self, n_heads, d_model, ff_units, n_features=None):
+        super().__init__()
+        self.n_heads = n_heads
+        self.d_model = d_model
+        self.ff_units = ff_units
+        self.n_features = n_features
+        self.self_attn_heads = MultiHeadAttention(n_heads, d_model,
+                                                  input_dim=n_features)
+        self.ffn = nn.Sequential(nn.Linear(d_model, ff_units),
+                                 nn.ReLU(),
+                                 nn.Linear(ff_units, d_model))
+
+    def forward(self, query, mask=None):
+        self.self_attn_heads.init_keys(query)   # query <- source data points
+        att = self.self_attn_heads(query, mask)  # att <- context vector
+        out = self.ffn(att)                     # out <- hidden state
+        return out
