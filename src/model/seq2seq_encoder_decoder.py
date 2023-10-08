@@ -213,6 +213,79 @@ class MultiHeadAttention(nn.Module):
         return out
 
 
+class MultiHeadedAttention(nn.Module):
+    """ narrow attention (by chunking the projections (k,v,q) not the inputs)
+    """
+    def __init__(self, n_heads, d_model, dropout=0.1):
+        super().__init__()
+        self.n_heads = n_heads
+        self.d_model = d_model
+        self.d_k = int(d_model / n_heads)  # chunk size
+        self.linear_query = nn.Linear(d_model, d_model)
+        self.linear_key = nn.Linear(d_model, d_model)
+        self.linear_value = nn.Linear(d_model, d_model)
+        self.linear_out = nn.Linear(d_model, d_model)
+        self.dropout = nn.Dropout(p=dropout)
+        self.alphas = None
+
+    def make_chunks(self, x):
+        batch_size, seq_len = x.size(0), x.size(1)
+        # (N, L, D) -> (N, L, n_heads * d_k) NOTE that d_k = D / n_heads
+        x = x.view(batch_size, seq_len, self.n_heads, self.d_k)
+        # (N, n_heads, L, d_k)
+        x = x.transpose(1, 2)
+        return x
+
+    def init_keys(self, key):
+        # (N, n_heads, L, d_k)
+        self.proj_key = self.make_chunks(self.linear_key(key))
+        self.proj_value = self.make_chunks(self.linear_key(key))
+
+    def score_function(self, query):
+        # scaled dot product
+        proj_query = self.make_chunks(self.linear_query(query))
+        # (N, n_heads, L, d_k * N, n_heads, d_k, L) -> (N, n_heads, L, L)
+        dot_products = torch.matmul(
+                proj_query, self.proj_key.transpose(-2, -1)
+                )
+        scores = dot_products / np.sqrt(self.d_k)
+        return scores
+
+    def attn(self, query, mask=None):
+        # Query is batch-first: (N, L, D)
+        # score function will generate scores for each head
+        scores = self.score_function(query)  # N, n_heads, L, L
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+        alphas = F.softmax(scores, dim=-1)  # N, n_heads, L, L
+
+        alphas = self.dropout(alphas)
+        self.alphas = alphas.detach()
+
+        # (N, n_heads, L, L * N, n_heads, L, d_k) -> (N, n_heads, L, d_k)
+        context = torch.matmul(alphas, self.proj_value)
+        return context
+
+    def output_function(self, context):
+        out = self.linear_out(context)  # (N, L, D)
+        return out
+
+    def forward(self, query, mask=None):
+        if mask is not None:
+            # N, 1, L, L -- every head uses the same task
+            mask = mask.unsqueeze(1)
+
+        # (N, n_heads, L, d_k)
+        context = self.attn(query, mask=mask)
+        # (N, L, n_heads, d_k)
+        context = context.transpose(1, 2).contiguous()
+        # (N, L, n_heads * d_k) = (N, L, d_model)
+        context = context.view(query.size(0), -1, self.d_model)
+        # (N, L, d_model)
+        out = self.output_function(context)
+        return out
+
+
 class EncoderSelfAttn(nn.Module):
     def __init__(self, n_heads, d_model, ff_units, n_features=None):
         super().__init__()
