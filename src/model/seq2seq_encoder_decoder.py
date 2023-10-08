@@ -433,8 +433,7 @@ class EncoderPe(nn.Module):
 
 
 class DecoderPe(nn.Module):
-    def __init__(self, n_heads, d_model, ff_units, n_features=None,
-            max_len=100):
+    def __init__(self, n_heads, d_model, ff_units, n_features=None, max_len=100):
         super().__init__()
         pe_dim = d_model if n_features is None else n_features
         self.pe = PositionalEncoding(max_len, pe_dim)
