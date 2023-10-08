@@ -183,6 +183,8 @@ class EncoderDecoderAttn(EncoderDecoder):
 
 
 class MultiHeadAttention(nn.Module):
+    """ wide attention (using full attention heads)
+    """
     def __init__(self, n_heads, d_model, input_dim=None, proj_values=True):
         super().__init__()
         self.linear_out = nn.Linear(n_heads * d_model, d_model)
@@ -418,8 +420,7 @@ class PositionalEncoding(nn.Module):
 
 
 class EncoderPe(nn.Module):
-    def __init__(self, n_heads, d_model, ff_units, n_features=None,
-            max_len=100):
+    def __init__(self, n_heads, d_model, ff_units, n_features=None, max_len=100):
         super().__init__()
         pe_dim = d_model if n_features is None else n_features
         self.pe = PositionalEncoding(max_len, pe_dim)
