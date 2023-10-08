@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from src.data_generation.square_sequences import generate_sequences
 from plot_square_sequences import sequence_pred
 from src.model.training_framework import MyTrainingClass
-from src.model.seq2seq_encoder_decoder import EncoderLayer, DecoderLayer, EncoderDecoderTransf
+from src.model.stacked_encoder_decoder import EncoderLayer, DecoderLayer, EncoderDecoderTransf
 
 
 def calc_alphas(ks, q):
@@ -124,7 +124,7 @@ for p in model.parameters():
 # model training
 mtc_seq = MyTrainingClass(model, loss_fn, optimizer)
 mtc_seq.set_loaders(train_loader, test_loader)
-mtc_seq.train(100)
+mtc_seq.train(50)
 
 viz = 1
 if viz:
