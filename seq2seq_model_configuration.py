@@ -10,8 +10,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from src.data_generation.square_sequences import generate_sequences
 from plot_square_sequences import sequence_pred
 from src.model.training_framework import MyTrainingClass
-from src.model.seq2seq_encoder_decoder import EncoderPe, DecoderPe, EncoderDecoderSelfAttn
-
+from src.model.seq2seq_encoder_decoder import EncoderLayer, DecoderLayer, EncoderDecoderTransf
 
 
 def calc_alphas(ks, q):
@@ -108,13 +107,19 @@ test_loader = DataLoader(test_data, batch_size=16)
 
 # model configuration
 torch.manual_seed(43)
-encoder_pe = EncoderPe(n_heads=3, d_model=2, ff_units=10, n_features=2)
-decoder_pe = DecoderPe(n_heads=3, d_model=2, ff_units=10, n_features=2)
-model = EncoderDecoderSelfAttn(
-    encoder_pe, decoder_pe, input_len=2, target_len=2
+enclayer = EncoderLayer(n_heads=3, d_model=6, ff_units=10, dropout=0.01)
+declayer = DecoderLayer(n_heads=3, d_model=6, ff_units=10, dropout=0.01)
+# # encoder and decoder
+model = EncoderDecoderTransf(
+    enclayer, declayer, input_len=2, target_len=2, n_features=2
 )
 loss_fn = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+# weight initialization
+for p in model.parameters():
+    if p.dim() > 1:
+        nn.init.xavier_uniform_(p)
 
 # model training
 mtc_seq = MyTrainingClass(model, loss_fn, optimizer)
