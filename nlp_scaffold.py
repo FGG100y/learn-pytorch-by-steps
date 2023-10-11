@@ -1,3 +1,68 @@
+""" brief history of Word Embeddings: """
+# STEP01 -- Static Word Embeddings:
+# 01 One-Hot encoding: each unique token(word) is represented by a vector full
+#    of zeros except for one position, which corresponds to the token's index.
+
+# 02 Bag-of-words (BoW): literally a bag of words: it simply sums up the
+#    corresponding OHE vectors, completely disregarding any underlying
+#    structure or relationships between the words.
+
+# 03 language model (LM): a model that estimates the probability of a token or
+#    sequence of tokens. I.e., a LM will predict the tokens more likely to
+#    **fill in a blank**.
+
+# 04 N-grams: (n-1) words followed by a blank, an n-gram model.
+#    E.g., three words and a blank: a four-gram;
+
+# 05 Continuous Bag-of-words (CBoW), Skip-gram (SG) [all belong to Word2Vec]
+#    In these models, the context is given by the surrounding words, both
+#    *before* and *after* the blank.
+#    E.g., to fill in the following blank:
+#       "the small [blank]"
+#    for a trigram model, the possibilities are endless. Now, consider the same
+#    sentence, this time containing the words that follow the blank:
+#       "the small [blank] is barking"
+#    much more easy: the blank highly likely is "dog".
+#    NOTE the "Continuous" means the vectors are not OHE anymore and have
+#    continous values instead.
+#    How to find these values that best represent each word? We need to train a
+#    model to learn them, and this model is called "Word2Vec".
+
+# 06 GloVe: Global Vectors for Word Representation
+#    GloVe combines the skip-gram model with co-occurrence statistics at the
+#    global level.
+
+#    NOTE The downside of these static word embeddings is that they are not
+#    contextual, which means that we'll always retrieve the same values from
+#    the word embeddings, regardless of the actual meaning of the word in
+#    context.
+
+# STEP02
+# Contextual Word Embeddings: “You shall know a word by the company it keeps”
+
+# 01 ELMo: Embeddings from Language Models (ELMo) is able to understand that
+#    words may have different meanings in different contexts. The model is a
+#    two-layer bidirectional LSTM encoder using 4,096 dimensions in its cell
+#    states and was trained on a really large corpus containing 5.5 billion
+#    words. Moreover, ELMo’s representations are *character-based*, so it can
+#    easily handle unknown (out-of-vocabulary) words.
+
+# 02 BERT, GPT
+#    The general idea, introduced by ELMo, of obtaining contextual word
+#    embeddings using a language model still holds true for BERT. The key
+#    different part is the **Transformer**.
+
+#    BERT (Bidiertional Encoder Representations from Transformers) is a 
+#    transformer-based encoder model.
+#    GPT (Generative Pre-trained Transformer) is a transformer-based decoder
+#    model.
+
+#    NOTE while BERT was trained to fill in the blanks in the middle of
+#    sentences (thus correcting corrupted inputs), GPT was trained to fill in
+#    blanks at the end of sentences, effectively predicting the next word in a
+#    given sentence.
+
+
 import os
 import json
 import errno
@@ -18,7 +83,14 @@ from nltk.tokenize import sent_tokenize
 
 import gensim
 from gensim import corpora, downloader
-from gensim.parsing.preprocessing import *
+from gensim.parsing.preprocessing import (
+    strip_tags,
+    strip_punctuation,
+    strip_multiple_whitespaces,
+    strip_numeric,
+    preprocess_string,
+)
+
 from gensim.utils import simple_preprocess
 from gensim.models import Word2Vec
 
@@ -44,6 +116,8 @@ from transformers.pipelines import SUPPORTED_TASKS
 
 import nlp_utils as nlpu
 
+
+# NOTE part-1 create datasets
 
 localfolder = "texts"
 verbose = 2
@@ -165,7 +239,10 @@ if verbose:
     print(new_fnames)
 
 
-# load data using load_dataset function,
+# NOTE part-2 huggingface dataset
+# STEP-01 loading a dataset (using load_dataset function)
+
+# loading a dataset using huggingface dataset's load_dataset function
 # with parameter data_files=new_fnames, quotechar="\\", split=TRAIN
 dataset = load_dataset(
     path="csv", data_files=new_fnames, quotechar="\\", split=Split.TRAIN
@@ -176,13 +253,16 @@ if verbose:
     print(dataset.features)
     print(dataset.column_names)
     print(dataset.shape)
-    print(dataset.unique('source'))
+    print(dataset.unique("source"))
+
+
+# STEP-02 data prepraration
 
 
 # use map() to create new columns by using function that return dict with new
 # columns as key
 def is_alice_label(row):
-    is_alice = int(row['source'] == "alice28-1476.txt")
+    is_alice = int(row["source"] == "alice28-1476.txt")
     return {"labels": is_alice}
 
 
@@ -196,19 +276,124 @@ if verbose:
 # whihch contains training and test sets:
 shuffled_dataset = dataset.shuffle(seed=42)
 split_dataset = shuffled_dataset.train_test_split(test_size=0.2)
-training_set = split_dataset['train']
-test_set = split_dataset['test']
+train_dataset = split_dataset["train"]
+test_dataset = split_dataset["test"]
 
 if verbose:
     print(split_dataset)
 
 
+# NOTE part-03 word tokenization
+
+# STEP-01: use Gensim's preprocess_string() DEMO
+# and use only the first four filters for preprocess_string():
+if verbose:
+    filters = [
+        lambda x: x.lower(),
+        strip_tags,
+        strip_punctuation,
+        strip_multiple_whitespaces,
+        strip_numeric,
+    ]
+    sentence = "I'm following the white rabbit"
+    print(preprocess_string(sentence, filters=filters))
+
+# STEP-02: vocabulary (a list of unique wordds that appear in the text corpara)
+# build our own vocabulary by tokenizing training set
+setences = train_dataset["sentence"]
+tokens = [simple_preprocess(sent) for sent in sentences]
+if verbose:
+    print(tokens[0])
+
+dict_tokens = corpora.Dictionary(tokens)  # not regular python dict
+if verbose:
+    print(dict_tokens)
+    # some usefull attributes of dict_tokens:
+    print(dict_tokens.num_docs)  # how many docs(sentences here)
+    print(dict_tokens.num_pos)  # how many tokens(words) over all docs
+    print(dict_tokens.token2id)  # {unique-word: unique-ID}
+    print(dict_tokens.cfs)  # collection frequencies #(given token appear)
+    print(dict_tokens.dfs)  # document frequencies (ID over distinct docs)
+
+# convert a list of tokens into a list of their corresponding indices in vocab
+sent_a = "follow the white rabbit"
+new_tokens = simple_preprocess(sent_a)
+ids = dict_tokens.doc2idx(new_tokens)
+if verbose:
+    print(new_tokens)
+    print(ids)
+
+# special token: [UNK] for unknown word (words not in our vocabulary)
+special_tokens = {'[PAD]': 0, '[UNK]': 1}
+dict_tokens.patch_with_special_tokens(special_tokens)
 
 
+def get_rare_ids(dict_tokens, min_freq):
+    return [t[0] for t in dict_tokens.cfs.items() if t[1] < min_freq]
 
 
+def make_vocab(sentences, folder=None, special_tokens=None, vocab_size=None,
+               min_freq=None):
+    if folder is not None:
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+
+    # tokenizes the sentences and creates a Dictionary
+    tokens = [simple_preprocess(sent) for sent in sentences]
+    dictionary = corpora.Dictionary(tokens)  # not regular python dict
+    if vocab_size is not None:
+        dictionary.filter_extremes(keep_n=vocab_size)
+    if min_freq is not None:
+        rare_tokens = get_rare_ids(dictionary, min_freq)
+        dictionary.filter_extremes(bad_ids=rare_tokens)
+    # gets the whole list of tokens and frequencies
+    items = dictionary.cfs.items()
+    words = [dictionary[t[0]] for t in sorted(items, key=lambda t: -t[1])]
+    # prepends special tokens, if any
+    if special_tokens is not None:
+        to_add = []
+        for special_token in special_tokens:
+            if special_token not in words:
+                to_add.append(special_token)
+        words = to_add + words
+
+    # write words to 'vocab.txt' into folder
+    with open(os.path.join(folder, 'vocab.txt'), 'w') as f:
+        for word in words:
+            f.write(f'{word}\n')
 
 
+make_vocab(train_dataset["sentence"], folder="texts/vocab",
+           special_tokens=["[PAD]", "[UNK]"], min_freq=2)
 
+# use BertTokenizer to create tokenizer based on our own vocabulary,
+# NOTE that the pre-trained tokenizer use for real with a pre-trained BERT
+# model does not need a vocabulary.
+tokenizer = BertTokenizer("texts/vocab.txt")
+sent_b = "follow the white rabbit neo"
+new_tokens = tokenizer.tokenize(sent_b)
+if verbose:
+    print(new_tokens)  # 'neo' should be [UNK]
 
+new_ids = tokenizer.convert_tokens_to_ids(new_tokens)
+# NOTE that tokenizer.encode() will perform two steps above together:
+new_ids_bak = tokenizer.encode(sent_b)
+print(new_ids_bak == new_ids)
 
+# for an enriched output, do call tokenizer() (without specified method)
+token_sent_b = tokenizer(sent_b, add_special_tokens=False, return_tensors="pt")
+print(token_sent_b)
+
+# STEP-03 tokenize the dataset
+# (this tokenized_dataset is ready for BERT model input)
+#  Behind the curtain, BERT is actually using vectors to represent the words.
+#  The token IDs we’ll be sending it are simply the indices of an enormous
+#  lookup table. That lookup table has a very nice name: Word Embeddings.
+tokenized_dataset = tokenizer(
+        dataset["sentence"],
+        padding=True,
+        return_tensors="pt",
+        max_length=50,
+        truncation=True,
+        )
+print(tokenized_dataset)
