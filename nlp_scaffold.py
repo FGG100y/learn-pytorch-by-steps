@@ -433,6 +433,11 @@ def get_embeddings(embed_model, sentence):
 #  print(bert_tokenizer.vocab)
 
 
+print(SUPPORTED_TASKS['sentiment-analysis'])
+print(SUPPORTED_TASKS['text-generation'])
+breakpoint()
+
+
 # PART-06 finetume pre-trained model using huggingface Trainer()
 def tokenize(row):
     return auto_tokenizer(
@@ -532,7 +537,7 @@ else:
     breakpoint()
 
 
-# other tasks and underline models:
-print(SUPPORTED_TASKS['sentiment-analysis'])
-print(SUPPORTED_TASKS['text-generation'])
+#  # other tasks and underline models:
+#  print(SUPPORTED_TASKS['sentiment-analysis'])
+#  print(SUPPORTED_TASKS['text-generation'])
 breakpoint()
