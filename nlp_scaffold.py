@@ -64,25 +64,11 @@
 
 
 import os
-import json
-import errno
-import requests
 import numpy as np
-from pathlib import Path
-from copy import deepcopy
-from operator import itemgetter
-from urllib import parse
 import torch
-import torch.optim as optim
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset, random_split, TensorDataset
 
-import nltk
-from nltk.tokenize import sent_tokenize
-
-import gensim
-from gensim import corpora, downloader
+from gensim import corpora
 from gensim.parsing.preprocessing import (
     strip_tags,
     strip_punctuation,
@@ -92,138 +78,37 @@ from gensim.parsing.preprocessing import (
 )
 
 from gensim.utils import simple_preprocess
-from gensim.models import Word2Vec
 
-#  from flair.embeddings import TransformerDocumentEmbeddings
 
 from datasets import load_dataset, Split
 from transformers import (
-    DataCollatorForLanguageModeling,
-    BertModel,
+    #  DataCollatorForLanguageModeling,
+    #  BertModel,
     BertTokenizer,
-    BertForSequenceClassification,
-    DistilBertModel,
+    #  BertForSequenceClassification,
+    #  DistilBertModel,
     DistilBertTokenizer,
     DistilBertForSequenceClassification,
     AutoModelForSequenceClassification,
-    AutoModel,
-    AutoTokenizer,
-    AutoModelForCausalLM,
+    #  AutoModel,
+    #  AutoTokenizer,
+    #  AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    pipeline,
     TextClassificationPipeline,
 )
 from transformers.pipelines import SUPPORTED_TASKS
 
-import nlp_utils as nlpu
+
 #  from src.model.training_framework import MyTrainingClass
 
-
-# PART-01 create datasets
 
 localfolder = "texts"
 verbose = 2
 
 
-# if lines.cfg file exists, do nothing, else create one
-if not os.path.exists(os.path.join(localfolder, "lines.cfg")):
-    CFG = """fname,start,end
-    alice28-1476.txt,104,3704
-    wizoz10-1740.txt,310,5100"""
-    # write content of CFG into f'{localfold}/lines.cfg' file
-    with open(os.path.join(localfolder, "lines.cfg"), "w") as f:
-        f.write(CFG)
-
-# load cfg file and build a dictionary of the form: {fname: (start, end)}
-with open(os.path.join(localfolder, "lines.cfg"), "r") as f:
-    lines = f.readlines()
-    lines = [line.strip().split(",") for line in lines[1:]]
-    config = {line[0]: (int(line[1]), int(line[2])) for line in lines}
-
-if verbose:
-    print("text config:", config)
-
-f1name = Path(parse.urlsplit(nlpu.ALICE_URL).path).name  # "alice28-1476.txt"
-f2name = Path(parse.urlsplit(nlpu.WIZARD_URL).path).name  # "wizoz10-1740.txt"
-
-
-def load_source_text(fname, localfolder="texts", skip_header=False):
-    # load alice-text from localfold
-    with open(os.path.join(localfolder, fname), "r") as f:
-        if skip_header:
-            # and get only target lines (readlines 104:3704)
-            start, end = config[fname]
-        else:
-            start, end = None, None
-        text = "".join(f.readlines()[slice(start, end, None)])
-    return text
-
-
-try:
-    alice_text = load_source_text(fname=f1name, skip_header=True)
-    wizoz_text = load_source_text(fname=f2name, skip_header=True)
-except FileNotFoundError:
-    nlpu.download_text(nlpu.ALICE_URL, localfolder)
-    nlpu.download_text(nlpu.WIZARD_URL, localfolder)
-    # load texts
-    alice_text = load_source_text(fname=f1name, skip_header=True)
-    wizoz_text = load_source_text(fname=f2name, skip_header=True)
-
-if verbose == 2:
-    print("files in ./texts/\n", os.listdir("./texts/"))
-
-corpus_alice = sent_tokenize(alice_text)
-corpus_wizoz = sent_tokenize(wizoz_text)
-
-if verbose:
-    print("Num. of sentences in texts:", len(corpus_alice), len(corpus_wizoz))
-    if verbose == 2:
-        print(corpus_alice[2])
-        print(corpus_wizoz[30])
-
-
-def sentence_tokenize(
-    fname,
-    quote_char="\\",
-    sep_char=",",
-    include_header=True,
-    include_source=True,
-    extensions=("txt"),
-    **kwargs,
-):
-    """cleans line breaks in text file, and save to CSV files"""
-    source = load_source_text(fname, skip_header=True)
-    contents = source.replace("\n", " ").replace("\r", "")
-    corpus = sent_tokenize(contents, **kwargs)
-
-    # builds a CSV file containing tokenized sentences,
-    # if include_header is True, and include_source also is true,
-    # then using header: ('sentence,source\n'), else ('sentence\n')
-    # then write the sentence in corpus in form of:
-    # f"{quote_char}{sentence}{quote_char}{sep_char}{fname}"
-    base = os.path.splitext(fname)[0]
-    new_fname = f"{base}.sent.csv"
-    new_fname = os.path.join(localfolder, new_fname)
-    with open(new_fname, "w") as f:
-        # Header of the file
-        if include_header:
-            if include_source:
-                f.write("sentence,source\n")
-            else:
-                f.write("sentence\n")
-        for sentence in corpus:
-            if include_source:
-                f.write(
-                    f"{quote_char}{sentence}{quote_char}{sep_char}{fname}\n"
-                )
-            else:
-                f.write(f"{quote_char}{sentence}{quote_char}\n")
-
-    return new_fname
-
-
-# write a function to get file's path that contain 'sent' in filename in localfolder
+# PART-01 create datasets (detail see ./nlp_scaffold_createdata.py)
+# get file's path that contain 'sent' in filename in localfolder
 def get_file_path(localfolder):
     return [
         os.path.join(localfolder, f)
@@ -233,13 +118,9 @@ def get_file_path(localfolder):
 
 
 new_fnames = get_file_path(localfolder)
-if len(new_fnames) == 0:
-    new_fnames = []
-    for fname in (f1name, f2name):
-        new_fname = sentence_tokenize(fname=fname)
-        new_fnames.append(new_fname)
-if verbose:
-    print(new_fnames)
+if len(new_fnames) == 0:  # if no such files, create them first
+    cmd = "python nlp_scaffold_createdata.py"
+    raise FileNotFoundError(f"files not found, run '{cmd}' to create first")
 
 
 # PART-02 load data by huggingface "datasets"
@@ -274,7 +155,7 @@ if verbose:
 
 # STEP-03 shuffle the dataset
 # shuffle the dataset to get shuffled_dataset,
-# then its method 'train_test_split' with test size of 0.2 to get split_dataset,
+# use its method 'train_test_split' with test size of 0.2 to get split_dataset,
 # whihch contains training and test sets:
 shuffled_dataset = dataset.shuffle(seed=42)
 split_dataset = shuffled_dataset.train_test_split(test_size=0.2)
@@ -401,7 +282,7 @@ if using_local_vocab:
 
     # STEP-03 tokenize the dataset
     # (this tokenized_dataset is ready for BERT model input)
-    #  Behind the curtain, BERT is actually using vectors to represent the words.
+    #  Behind these, BERT is actually using vectors to represent the words.
     #  The token IDs we’ll be sending it are simply the indices of an enormous
     #  lookup table. That lookup table has a very nice name: Word Embeddings.
     tokenized_dataset = tokenizer(
@@ -419,6 +300,7 @@ def contextual_embedding_using_flair_demo(verbose=False):
     # NOTE ELMo needs allennlp==0.9.0 (which may conflict to other pkgs)
     from flair.data import Sentence
     from flair.embeddings import ELMoEmbeddings, TransformerWordEmbeddings
+    from flair.embeddings import TransformerDocumentEmbeddings
 
     watch1 = """
     The Hatter was the first to break the silence. `What day of the
@@ -455,14 +337,14 @@ def contextual_embedding_using_flair_demo(verbose=False):
     score = similarity(bert_watch1, bert_watch2)
     print("CosineSimilarity of 'watch' in two sentences:", score)
 
-    #  # NOTE document embedding
-    #  # generate embeddings for whole documents instead of for single words, thus
-    #  # eliminating the need to average word embeddings:
-    #  documents = [Sentence(watch1), Sentence(watch2)]  # flair_sentences
-    #  bert_doc = TransformerDocumentEmbeddings("bert-base-uncased")
-    #  bert_doc.embed(documents)
-    #  print(documents[0].tokens[31].embedding)  # no individual token's embedding
-    #  print(get_embeddings(bert_doc, watch1))
+    # NOTE document embedding
+    # generate embeddings for whole documents instead of for single words, thus
+    # eliminating the need to average word embeddings:
+    documents = [Sentence(watch1), Sentence(watch2)]  # flair_sentences
+    bert_doc = TransformerDocumentEmbeddings("bert-base-uncased")
+    bert_doc.embed(documents)
+    print(documents[0].tokens[31].embedding)  # no individual token's embedding
+    print(get_embeddings(bert_doc, watch1))
 
 
 # word embeddings for all tokens in a sentence, we can simply stack them up:
@@ -482,6 +364,7 @@ def get_embeddings(embed_model, sentence):
 #      contextual_embedding_using_flair_demo(verbose=True)
 
 
+# NOTE flair not working (2023-10-12 16:40:31 Thursday)
 # PART-04 using pre-trained BERT embeddimgs (document tokenizer)
 #  ------ train datasets for pre-trained model ------
 #  Before, the features were a sequence of token IDs, which were used to look
