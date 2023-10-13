@@ -433,7 +433,7 @@ def get_embeddings(embed_model, sentence):
 #  print(bert_tokenizer.vocab)
 
 
-print(SUPPORTED_TASKS['sentiment-analysis'])
+print(SUPPORTED_TASKS['text-classification'])  # alias 'sentiment-analysis'
 print(SUPPORTED_TASKS['text-generation'])
 breakpoint()
 
