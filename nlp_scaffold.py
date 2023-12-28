@@ -181,7 +181,7 @@ if verbose:
     sentence = "I'm following the white rabbit"
     print(preprocess_string(sentence, filters=filters))
 
-# STEP-02: vocabulary (a list of unique wordds that appear in the text corpara)
+# STEP-02: vocabulary (a list of unique words that appear in the text corpara)
 # build our own vocabulary by tokenizing training set
 sentences = train_dataset["sentence"]
 tokens = [simple_preprocess(sent) for sent in sentences]
