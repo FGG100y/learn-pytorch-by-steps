@@ -17,6 +17,7 @@ tags
 # notebooks (not jupytext paired .py file)
 *.ipynb
 notebooks/*.md 
+notebooks/d2l-ipynb/
 # directories --------------------------------
 # ignore all files in this dir and its subdirs
 tmp/
