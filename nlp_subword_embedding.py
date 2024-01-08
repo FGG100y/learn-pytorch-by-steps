@@ -1,13 +1,13 @@
 """Subword embeddings
 
 - fastText: Instead of learning word-level vector representations, fastText can
-  be considered as the subword-level skip-gram, where each center word is rep-
-  resented by the sum of its subword vectors.
+  be considered as the subword-level skip-gram (character ngrams), where each
+  center word is represented by the sum of its subword vectors.
   In fastText, for any word 𝑤, denote by 'G𝑤' the union of all its subwords of
-  length between 3 and 6 and its special subword. The vocabulary is the union
-  of the subwords of all words.
+  length between 3 and 6 and its special subword (e.g. <wh, whe, her, ere, re>;
+  <where>). The vocabulary is the union of the subwords of all words.
   pro: rare words even out-of-vocab words get better vector representations
-  con: larger vocab (size not predefined), and higher computational complexity
+  con: larger vocab (no predefined size), and higher computational complexity
 
 - Byte Pair Encoding (BPE): a compression algorithm to allow for
   variable-length subwords in a fixed-size vocabulary. BPE performs a
